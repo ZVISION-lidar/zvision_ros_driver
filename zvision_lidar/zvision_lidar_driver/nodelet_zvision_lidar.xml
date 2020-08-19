@@ -1,0 +1,9 @@
+<library path="lib/libzvision_lidar_driver_nodelet">
+  <class name="zvision_lidar_driver/DriverNodelet"
+         type="zvision_lidar_driver::DriverNodelet"
+         base_class_type="nodelet::Nodelet">
+    <description> 
+      Publish raw zvision lidar data packets.
+    </description>
+  </class>
+</library>

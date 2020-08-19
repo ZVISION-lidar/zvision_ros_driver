@@ -1,0 +1,28 @@
+<launch>
+  <arg name="model" default="ML30S-A1" />
+  <arg name="device_ip" default="192.168.10.108" />
+  <arg name="udp_port" default="2368" />
+  <arg name="angle_path" default="$(find zvision_lidar_pointcloud)/data/ML30S_A1_Default.cal"/>
+
+  <node  name="zvision_lidar_node" pkg="zvision_lidar_driver" type="zvision_lidar_node" output="screen" >
+    <param name="model" value="$(arg model)"/>
+    <param name="device_ip" value="$(arg device_ip)" />
+    <param name="udp_port" value="$(arg udp_port)" />
+    <param name="pcap" value="" />
+  </node>
+
+  <node  name="cloud_node" pkg="zvision_lidar_pointcloud" type="zvision_lidar_cloud_node" output="screen" >
+    <param name="model" value="$(arg model)"/>
+    <param name="angle_path" value="$(arg angle_path)" />
+    <param name="x_tra" value="0.0" />
+    <param name="y_tra" value="0.0" />
+    <param name="z_tra" value="0.0" />
+    <param name="x_rot" value="0.0" />
+    <param name="y_rot" value="0.0" />
+    <param name="z_rot" value="0.0" />
+    <param name="timestamp_type" value="1" />
+  </node>
+
+  <!-- node name="rviz" pkg="rviz" type="rviz"  args="-d $(find zvision_lidar_pointcloud)/rviz_cfg/zvision_lidar.rviz" /-->
+  <node name="rviz" pkg="rviz" type="rviz"  args="-d $(find zvision_lidar_pointcloud)/rviz_cfg/zvision_lidar.rviz" />
+</launch>

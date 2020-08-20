@@ -1,6 +1,6 @@
 #### 1. Prerequisites
-(1) Install a ubuntu PC. We suggested Ubuntu 14.04 or Ubuntu 16.04. Please do not use virtual machine.
-(2) Install ros full-desktop version. We tried Indigo and Kinect.
+(1) Install a ubuntu PC. We suggested Ubuntu 14.04, Ubuntu 16.04 and Ubuntu 18.04. Please do not use virtual machine.
+(2) Install ros full-desktop version. We tried Indigo, Kinect and Melodic.
 (3) Please also install libpcap-dev.
 
 ####  2. Install
@@ -9,7 +9,7 @@
 (2). Check the file attributes:
 
 ```
-cd ~/catkin_ws/src/zvisionlidar/zvision_lidar_drvier
+cd ~/catkin_ws/src/zvisionlidar/zvision_lidar_driver
 chmod 777 cfg/*
 cd ~/catkin_ws/src/zvisionlidar/zvision_lidar_pointcloud
 chmod 777 cfg/*
@@ -22,36 +22,35 @@ cd ~/catkin_ws
 catkin_make
 ```
 #### 3. Configure PC IP
-By default, the ZVISION_LIDAR is configured to **192.168.10.108** as its device IP and **255.255.255.255** as destination IP that it would communicate. The default **LiDAR UDP dst port is 35xx(3500)**.
+By default, the ZVISION_LIDAR is configured to **192.168.10.108** as its device IP and **255.255.255.255** as destination IP that it would communicate. The default **LiDAR UDP dst port is 2368**.
 So you need configure your PC IP as a static one **192.168.10.10**.
 
-#### 4. Run as independent node
-We have provide example launch files under zvision_lidar_pointcloud/launch, we can run the launch file to view the point cloud data. For example, if we want to view ML30 real time data:
+#### 4. Run online lidar
+We have provide example launch files under zvision_lidar_pointcloud/launch, we can run the launch file to view the point cloud data. For example, if we want to view ML30/ML30SA1 real time data:
 (1). Open a new terminal and run:
 
 ```
 cd ~/catkin_ws
 source devel/setup.bash
-roslaunch zvision_lidar_pointcloud zvision_lidar_ML30.launch
+roslaunch zvision_lidar_pointcloud ML30SA1.launch
 ```
 
-#### 5. Run as nodelet
-We can also run the driver node and cloud node as a nodelet.
-Open a new terminal and run:
+#### 5. Run offline pcap file
+We can also run the driver to view the offline pcap file:
 
 ```
 cd ~/catkin_ws
 source devel/setup.bash
-roslaunch zvision_lidar_pointcloud online_sensor_cloud_nodelet.launch
+roslaunch zvision_lidar_pointcloud ML30SA1_pcap.launch
 ```
 Then we can run view the pointcloud via "rviz"
 
 #### 6. About the lidar calibration parameters
 Under "**zvision_lidar_pointcloud/data**" directory, you can find the lidar calibration parameters files for the exact sensor. By default the launch file load the files
-- zvision_lidar_pointcloud/data/ML30_Default.cal
+- zvision_lidar_pointcloud/data/ML30SA1_Default.cal
 
 
-If you have more than one ZVISIONLIDAR, you can put the data files into "**zvision_lidar_pointcloud/data**" directory.Then you need rewrite the launch file to start your lidar. We have put an example launch file "online_two_sensor_cloud_nodelet.launch" to load two lidars together for reference.
+If you have more than one ZVISIONLIDAR, you can put the data files into "**zvision_lidar_pointcloud/data**" directory.Then you need rewrite the launch file to start your lidar. We have put an example launch file "ML30SA1_two_sensor.launch" to load two lidars together for reference.
 
 #### 7. Apply translation and rotation to the pointcloud
 We could apply translation and rotation to the pointcloud before calculate the x-y-z. This operation is used after a zvision_lidar_node node is running.

@@ -78,7 +78,7 @@ Visualization Manager:
       Size (m): 0.01
       Style: Points
       Topic: /zvision_lidar_points
-      Unreliable: true
+      Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
       Value: true

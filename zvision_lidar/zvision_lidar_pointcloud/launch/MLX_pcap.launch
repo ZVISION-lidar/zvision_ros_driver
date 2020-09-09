@@ -1,10 +1,10 @@
 <launch>
   <arg name="manager" default="zvision_lidar_nodelet_manager" />
-  <arg name="model" default="ML30B1" />
-  <arg name="device_ip" default="192.168.10.108" />
+  <arg name="model" default="MLX" />
+  <arg name="device_ip" default="192.168.1.200" />
   <arg name="udp_port" default="2368" />
-  <arg name="angle_path" default="$(find zvision_lidar_pointcloud)/data/ML30_Default.cal" />
-  <arg name="pcap" default="" />
+  <arg name="angle_path" default="$(find zvision_lidar_pointcloud)/data/MLX_Default.cal" />
+  <arg name="pcap" default="$(find zvision_lidar_pointcloud)/data/MLX_Default.pcap" />
 
   <!-- start nodelet manager -->
   <node pkg="nodelet" type="nodelet" name="$(arg manager)" args="manager" output="screen"/>

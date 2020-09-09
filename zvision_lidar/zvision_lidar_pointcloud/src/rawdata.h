@@ -34,6 +34,14 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <stdio.h>
 #include <iostream>
+#include <memory>
+#include <thread>
+#include "tools/tools.h"
+
+
+class zvision::CalibrationData;
+class zvision::PointCalibrationTable;
+enum zvision::LidarType;
 namespace zvision_lidar_rawdata
 {
 
@@ -45,18 +53,16 @@ namespace zvision_lidar_rawdata
 static const int PACKET_SIZE_ML30 = 1304;//PACKET_SIZE
 static const int PACKET_SIZE_ML30S_A1 = 1346;
 static const int GROUP_PER_PACKET_ML30 = 80;
+static const int GROUP_PER_PACKET_MLX = 80;
 static const int GROUP_PER_PACKET = 40;
 static const int POINT_PER_GROUP_ML30 = 3;
 static const int POINT_PER_GROUP = 8;
+static const int POINT_PER_GROUP_MLX = 3;
 
 /** \brief ZVISION LIDAR data conversion class */
 class RawData
 {
 public:
-  enum LIDAR_TYPE{
-  	ML30,
-  	ML30S_A1
-  };
 
   RawData();
 
@@ -65,25 +71,34 @@ public:
   /*load the cablibrated files: angle*/
   void loadConfigFile(ros::NodeHandle node, ros::NodeHandle private_nh);
 
+  /*calibration data is init ok or not*/
+  bool isCalibrationInitOk();
+
   /*unpack the ML30S-A1 UDP packet and opuput PCL PointXYZI type*/
   void unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::PointCloud<pcl::PointXYZI>::Ptr pointcloud);
 
   /*gps time stamp*/
   void getTimeStampFromUdpPkt(const zvision_lidar_msgs::zvisionLidarPacket& pkt, long long int& unix_sec, long long int&  unix_microsec);
 
-  bool is_init_angle_;
-  int timestamp_type;/*0:local time, 1:get the timestamp from udp*/
+  bool cal_init_ok_;
+  bool use_lidar_time_;/*0:local time, 1:get the timestamp from udp*/
+  std::string dev_ip_;
 
+  zvision::LidarType device_type_;
+  std::shared_ptr<zvision::CalibrationData> cal_;
+  std::shared_ptr<zvision::PointCalibrationTable> cal_lut_;
 
-  LIDAR_TYPE type;
-  double *pdElevationAngle;
-  double *pdAzimuthAngle;
+  std::shared_ptr<std::thread> online_calibration_thread_ = NULL;
+
   double x_trans;
   double y_trans;
   double z_trans;
   double x_rotation;
   double y_rotation;
   double z_rotation;
+
+protected:
+  void PollCalibrationData(void);
 
 };
 

@@ -15,6 +15,7 @@
 
 */
 #include "convert.h"
+#include "tools/tools.h"
 #include <pcl_conversions/pcl_conversions.h>
 
 namespace zvision_lidar_pointcloud
@@ -25,7 +26,9 @@ std::string model;
 Convert::Convert(ros::NodeHandle node, ros::NodeHandle private_nh) : data_(new zvision_lidar_rawdata::RawData())
 {
 
-  private_nh.param("model", model, std::string("ML30S-A1"));
+  private_nh.param("model", model, std::string("ML30SA1"));
+  device_type_ = zvision::LidarTools::GetDeviceTypeFromTypeString(model);
+
   output_ = node.advertise<sensor_msgs::PointCloud2>("zvision_lidar_points", 20);
 
   //srv_question
@@ -64,56 +67,48 @@ void Convert::processScan(const zvision_lidar_msgs::zvisionLidarScan::ConstPtr& 
   outPoints->header.frame_id = scanMsg->header.frame_id;
   outPoints->clear();
 
+  if(!data_->isCalibrationInitOk())
+  {
+      ROS_WARN_ONCE("Calibration data is not initialized.");
+      return;
+  }
+  else
+      ROS_INFO_ONCE("Calibration data init ok.");
 
-  if(model == "ML30S-A1"){
+  if(device_type_ == zvision::ML30SA1){
 	  outPoints->height = 1;
 	  outPoints->width = 51200;/*51200 points per scan*/
 	  outPoints->is_dense = false;
 	  outPoints->resize(outPoints->height * outPoints->width);
-
-
-	  for (size_t i = 0; i < scanMsg->packets.size(); ++i)
-	  {
-		  data_->unpack(scanMsg->packets[i], outPoints);
-	  }
-
-	  if((0 != data_->timestamp_type) && (scanMsg->packets.size()))
-	  {
-		  data_->getTimeStampFromUdpPkt(scanMsg->packets[0], time_from_pkt_s, time_from_pkt_us);
-		  outPoints->header.stamp = time_from_pkt_s * 1000000 + time_from_pkt_us;
-		  //outPoints->header.stamp = time_from_pkt_us * 1000;
-	  }
-
-	  sensor_msgs::PointCloud2 outMsg;
-	  pcl::toROSMsg(*outPoints, outMsg);
-
-	  output_.publish(outMsg);
   }
-  else if(model == "ML30"){
+  else if(device_type_ == zvision::ML30B1){
 	  outPoints->height = 1;
 	  outPoints->width = 30000;/*30000 points per scan*/
 	  outPoints->is_dense = false;
-	  outPoints->resize(outPoints->height * outPoints->width);
-
-	  // process each packet provided by the driver
-	  for (size_t i = 0; i < scanMsg->packets.size(); ++i)
-	  {
-		  data_->unpack(scanMsg->packets[i], outPoints);
-	  }
-
-	  if((0 != data_->timestamp_type) && (scanMsg->packets.size()))
-	  {
-		  data_->getTimeStampFromUdpPkt(scanMsg->packets[0], time_from_pkt_s, time_from_pkt_us);
-		  outPoints->header.stamp = time_from_pkt_s * 1000000 + time_from_pkt_us;
-		  //outPoints->header.stamp = time_from_pkt_us * 1000;
-	  }
-
-	  sensor_msgs::PointCloud2 outMsg;
-	  pcl::toROSMsg(*outPoints, outMsg);
-
-	  output_.publish(outMsg);
-
+      outPoints->resize(outPoints->height * outPoints->width);
   }
+  else if(device_type_ == zvision::MLX){
+      outPoints->height = 1;
+      outPoints->width = 96000;/*96000 points per scan*/
+      outPoints->is_dense = false;
+      outPoints->resize(outPoints->height * outPoints->width);
+  }
+
+  for (size_t i = 0; i < scanMsg->packets.size(); ++i)
+  {
+      data_->unpack(scanMsg->packets[i], outPoints);
+  }
+
+  if((true == data_->use_lidar_time_) && (scanMsg->packets.size()))
+  {
+      data_->getTimeStampFromUdpPkt(scanMsg->packets[0], time_from_pkt_s, time_from_pkt_us);
+      outPoints->header.stamp = time_from_pkt_s * 1000000 + time_from_pkt_us;
+  }
+
+  sensor_msgs::PointCloud2 outMsg;
+  pcl::toROSMsg(*outPoints, outMsg);
+  output_.publish(outMsg);
+
 }
 
 }  // namespace zvision_lidar_pointcloud

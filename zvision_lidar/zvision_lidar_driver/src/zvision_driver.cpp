@@ -31,7 +31,7 @@ zvisionLidarDriver::zvisionLidarDriver(ros::NodeHandle node, ros::NodeHandle pri
   private_nh.param("model", config_.model, std::string("ML30SA1"));
   double packet_rate_ML30 = 2500;
   double packet_rate_ML30S_A1 = 3200;
-  double packet_rate_MLX = 4000;
+  double packet_rate_MLX = 8000;
   std::string model_full_name;
 
   // product model

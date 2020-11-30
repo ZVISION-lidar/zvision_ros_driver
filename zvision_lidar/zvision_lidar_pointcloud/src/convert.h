@@ -22,6 +22,8 @@
 
 #include <sensor_msgs/PointCloud2.h>
 #include <dynamic_reconfigure/server.h>
+#include <pcl/filters/voxel_grid.h>
+
 #include "zvision_lidar_pointcloud/CloudNodeConfig.h"
 #include "rawdata.h"
 #include "tools/tools.h"
@@ -49,6 +51,10 @@ private:
   boost::shared_ptr<zvision_lidar_rawdata::RawData> data_;
   ros::Subscriber zvision_lidar_scan_;
   ros::Publisher output_;
+  pcl::VoxelGrid<pcl::PointXYZI> voxel_grid_filter_;
+  bool filter_enable_;
+  float leaf_size_;
+
 };
 
 }  // namespace zvision_lidar_pointcloud

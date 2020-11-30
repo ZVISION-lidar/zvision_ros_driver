@@ -24,10 +24,14 @@ std::string model;
 
 /** @brief Constructor. */
 Convert::Convert(ros::NodeHandle node, ros::NodeHandle private_nh) : data_(new zvision_lidar_rawdata::RawData())
+  ,filter_enable_(false)
 {
 
   private_nh.param("model", model, std::string("ML30SA1"));
   device_type_ = zvision::LidarTools::GetDeviceTypeFromTypeString(model);
+  private_nh.param("filter_enable", filter_enable_, false);
+  private_nh.param("voxel_leaf_size", leaf_size_, 0.2f);
+  voxel_grid_filter_.setLeafSize(leaf_size_, leaf_size_, leaf_size_);
 
   output_ = node.advertise<sensor_msgs::PointCloud2>("zvision_lidar_points", 20);
 
@@ -106,7 +110,16 @@ void Convert::processScan(const zvision_lidar_msgs::zvisionLidarScan::ConstPtr& 
   }
 
   sensor_msgs::PointCloud2 outMsg;
-  pcl::toROSMsg(*outPoints, outMsg);
+  pcl::PointCloud<pcl::PointXYZI>::Ptr sampled_cloud(new pcl::PointCloud<pcl::PointXYZI>());
+  if(filter_enable_)
+      {
+      voxel_grid_filter_.setInputCloud(outPoints);
+      voxel_grid_filter_.filter(*sampled_cloud);
+      pcl::toROSMsg(*sampled_cloud, outMsg);
+  }else{
+      pcl::toROSMsg(*outPoints, outMsg);
+  }
+
   output_.publish(outMsg);
 
 }

@@ -39,6 +39,13 @@ public:
   {
   }
 
+  enum DownsampleType
+  {
+      None = 0,
+      Voxel = 1,
+      Line = 2,
+  };
+
 private:
   void callback(zvision_lidar_pointcloud::CloudNodeConfig& config, uint32_t level);
 
@@ -54,7 +61,8 @@ private:
   pcl::VoxelGrid<pcl::PointXYZI> voxel_grid_filter_;
   bool filter_enable_;
   float leaf_size_;
-
+  int line_sample_;
+  DownsampleType downsample_type_;
 };
 
 }  // namespace zvision_lidar_pointcloud

@@ -28,6 +28,7 @@ RawData::RawData()
   this->use_lidar_time_ = false; /* default is local timestamp */
   this->cal_.reset(new zvision::CalibrationData());
   this->cal_lut_.reset(new zvision::PointCalibrationTable());
+  point_line_number_.resize(MAX_POINTS, 0);
   x_trans = 0.0;
   y_trans = 0.0;
   z_trans = 0.0;
@@ -92,7 +93,7 @@ void RawData::loadConfigFile(ros::NodeHandle node, ros::NodeHandle private_nh)
       //read calibration file
       if(0 != zvision::LidarTools::ReadCalibrationFile(anglePath, *(this->cal_.get())))
       {
-          ROS_ERROR("Read calibration file error, %s", anglePath);
+          ROS_ERROR("Read calibration file error, %s", anglePath.c_str());
       }
 
       //compute sin cos
@@ -103,6 +104,7 @@ void RawData::loadConfigFile(ros::NodeHandle node, ros::NodeHandle private_nh)
       else
       {
           ROS_INFO("Load device %s's calibration file ok, device type is %s", this->dev_ip_.c_str(), zvision::LidarTools::GetDeviceTypeString(device_type_).c_str());
+          zvision::LidarTools::ComputePointLineNumber(*this->cal_lut_, this->point_line_number_);
           this->cal_init_ok_ = true;
       }
   }
@@ -160,7 +162,7 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
 			  disTemp = (((Dis_High << 8) + Dis_Low) << 3) + (int)((Int_High & 0xE0) >> 5);
 			  double distantce_real_live = disTemp * 0.0015;/*distance from udp*/
 			  intensity = (((Int_High & 0x1F) << 8) + (Int_Low));/*reflectivity from udp*/
-			  intensity = intensity & 0x3FF;
+              intensity = intensity & 0x3FF;
 
               zvision::PointCalibrationData& cal = this->cal_lut_->data[point_num];
               point.x = distantce_real_live * cal.cos_ele * cal.sin_azi;/*x*/
@@ -417,6 +419,8 @@ void RawData::PollCalibrationData(void) {
         ROS_WARN("Unable to get online calibration from %s.", this->dev_ip_.c_str());
     else {
         zvision::LidarTools::ComputeCalibrationData(cal, *(cal_lut_.get()));
+        zvision::LidarTools::ComputePointLineNumber(*(cal_lut_.get()), this->point_line_number_);
+
         this->cal_init_ok_ = true;
         ROS_INFO("Get online calibration from %s ok.", this->dev_ip_.c_str());
     }

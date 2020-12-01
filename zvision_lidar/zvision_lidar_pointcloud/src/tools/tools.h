@@ -59,6 +59,7 @@ namespace zvision {
             static void ComputeCalibrationData(CalibrationData& cal, PointCalibrationTable& cal_lut);
             static std::string GetDeviceTypeString(LidarType tp);
             static LidarType GetDeviceTypeFromTypeString(std::string tp);
+            static void ComputePointLineNumber(PointCalibrationTable& cal_lut, std::vector<int>& line_numbers);
 
     };
 }

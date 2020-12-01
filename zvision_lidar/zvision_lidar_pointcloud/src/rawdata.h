@@ -39,9 +39,13 @@
 #include "tools/tools.h"
 
 
-class zvision::CalibrationData;
-class zvision::PointCalibrationTable;
-enum zvision::LidarType;
+namespace zvision
+{
+    class CalibrationData;
+    class PointCalibrationTable;
+    enum LidarType;
+}
+
 namespace zvision_lidar_rawdata
 {
 
@@ -58,6 +62,7 @@ static const int GROUP_PER_PACKET = 40;
 static const int POINT_PER_GROUP_ML30 = 3;
 static const int POINT_PER_GROUP = 8;
 static const int POINT_PER_GROUP_MLX = 3;
+static const int MAX_POINTS = 102400;
 
 /** \brief ZVISION LIDAR data conversion class */
 class RawData
@@ -87,6 +92,7 @@ public:
   zvision::LidarType device_type_;
   std::shared_ptr<zvision::CalibrationData> cal_;
   std::shared_ptr<zvision::PointCalibrationTable> cal_lut_;
+  std::vector<int> point_line_number_;
 
   std::shared_ptr<std::thread> online_calibration_thread_ = NULL;
 

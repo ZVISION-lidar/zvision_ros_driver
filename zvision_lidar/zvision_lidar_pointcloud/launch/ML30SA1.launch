@@ -24,8 +24,11 @@
     <param name="model" value="$(arg model)"/>
     <param name="angle_path" value="$(arg angle_path)" />
     <param name="device_ip" value="$(arg device_ip)" />
-    <param name="filter_enable" value="false" />
-    <param name="voxel_leaf_size" value="0.2" />
+    <!-- param name="downsample_type" value="downsample_voxel" /-->
+    <!-- param name="downsample_type" value="downsample_line" /-->
+    <!-- param name="downsample_type" value="none" /-->
+    <param name="line_sample" value="2" />
+    <param name="voxel_leaf_size" value="0.5" />
     <param name="x_tra" value="0.0" />
     <param name="y_tra" value="0.0" />
     <param name="z_tra" value="0.0" />

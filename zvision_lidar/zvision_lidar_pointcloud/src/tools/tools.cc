@@ -413,4 +413,36 @@ namespace zvision {
         return dev_ty;
     }
 
+    void LidarTools::ComputePointLineNumber(PointCalibrationTable& cal_lut, std::vector<int>& line_numbers)
+    {
+        int fovs = 8; //default is ML30SA1
+        if(LidarType::ML30B1 == cal_lut.model)
+            fovs = 3;
+        else if(LidarType::ML30SA1 == cal_lut.model)
+            fovs = 8;
+        else if(LidarType::MLX == cal_lut.model)
+            fovs = 3;
+        else
+            ;
+
+        for(int i = 0; i < fovs * 2;i++)
+            line_numbers[i] = 0;
+
+        std::vector<PointCalibrationData>& data = cal_lut.data;
+        for(int f = 0; f < fovs; f++)
+        {
+            int curr_line = 0;
+            for(int g = 2; g < data.size() / fovs; g++)
+            {
+                int point_id = g * fovs + f;
+                float pre_dif = data[point_id - fovs].azi - data[point_id - fovs * 2].azi; // pre - pre's pre
+                float curr_dif = data[point_id].azi - data[point_id - fovs].azi; // curr - pre
+                if((pre_dif * curr_dif) < 0.0)
+                    curr_line++;
+
+                line_numbers[point_id] = curr_line;
+            }
+        }
+    }
+
 }

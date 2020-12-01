@@ -29,9 +29,29 @@ Convert::Convert(ros::NodeHandle node, ros::NodeHandle private_nh) : data_(new z
 
   private_nh.param("model", model, std::string("ML30SA1"));
   device_type_ = zvision::LidarTools::GetDeviceTypeFromTypeString(model);
-  private_nh.param("filter_enable", filter_enable_, false);
-  private_nh.param("voxel_leaf_size", leaf_size_, 0.2f);
-  voxel_grid_filter_.setLeafSize(leaf_size_, leaf_size_, leaf_size_);
+  //private_nh.param("filter_enable", filter_enable_, false);
+
+  std::string downsample_string = "";
+  private_nh.param("downsample_type", downsample_string, std::string(""));
+  if(downsample_string == "downsample_line")
+  {
+      private_nh.param("line_sample", line_sample_, 2);
+      this->downsample_type_ = DownsampleType::Line;
+      ROS_INFO("Downsample type is [Line], 1 in %d.", line_sample_);
+  }
+  else if(downsample_string == "downsample_voxel")
+  {
+      private_nh.param("voxel_leaf_size", leaf_size_, 0.2f);
+      voxel_grid_filter_.setLeafSize(leaf_size_, leaf_size_, leaf_size_);
+      this->downsample_type_ = DownsampleType::Voxel;
+      ROS_INFO("Downsample type is [Voxel], leaf size is [%.3f].", leaf_size_);
+  }
+  else
+  {
+      this->downsample_type_ = DownsampleType::None;
+      ROS_INFO("Downsample type is [None] publish raw pointcloud.");
+  }
+
 
   output_ = node.advertise<sensor_msgs::PointCloud2>("zvision_lidar_points", 20);
 
@@ -111,12 +131,33 @@ void Convert::processScan(const zvision_lidar_msgs::zvisionLidarScan::ConstPtr& 
 
   sensor_msgs::PointCloud2 outMsg;
   pcl::PointCloud<pcl::PointXYZI>::Ptr sampled_cloud(new pcl::PointCloud<pcl::PointXYZI>());
-  if(filter_enable_)
-      {
+  sampled_cloud->header.stamp = pcl_conversions::toPCL(scanMsg->header).stamp;
+  sampled_cloud->header.frame_id = scanMsg->header.frame_id;
+  if(DownsampleType::Voxel == downsample_type_)
+  {
       voxel_grid_filter_.setInputCloud(outPoints);
       voxel_grid_filter_.filter(*sampled_cloud);
       pcl::toROSMsg(*sampled_cloud, outMsg);
-  }else{
+  }
+  else if(DownsampleType::Line == downsample_type_)
+  {
+      sampled_cloud->resize(outPoints->size());
+      int valid = 0;
+      int line_interval = line_sample_;
+      std::vector<int>& point_line_number = data_->point_line_number_;
+      for(int p = 0; p < outPoints->size(); p++)
+      {
+          if(0 == (point_line_number[p] % (line_interval + 1)))
+              sampled_cloud->at(valid++) = outPoints->at(p);
+      }
+      sampled_cloud->height = 1;
+      sampled_cloud->width = valid;
+      sampled_cloud->is_dense = false;
+      sampled_cloud->resize(valid);
+      pcl::toROSMsg(*sampled_cloud, outMsg);
+  }
+  else
+  {
       pcl::toROSMsg(*outPoints, outMsg);
   }
 

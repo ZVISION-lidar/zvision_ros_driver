@@ -107,6 +107,12 @@ namespace zvision {
             data_size = (6400 * 8 * 2);
             cal.model = ML30SA1;
         }
+        else if (0 == dev_code.compare("30S_B1"))
+        {
+            total_packet = 400;
+            data_size = (6400 * 8 * 2);
+            cal.model = ML30SA1;
+        }
         else
         {
             ROS_ERROR_STREAM("Calibration packet identify error");

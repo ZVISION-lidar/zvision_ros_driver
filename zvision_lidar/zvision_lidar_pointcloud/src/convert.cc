@@ -52,7 +52,6 @@ Convert::Convert(ros::NodeHandle node, ros::NodeHandle private_nh) : data_(new z
       ROS_INFO("Downsample type is [None] publish raw pointcloud.");
   }
 
-
   output_ = node.advertise<sensor_msgs::PointCloud2>("zvision_lidar_points", 20);
 
   //srv_question
@@ -66,6 +65,7 @@ Convert::Convert(ros::NodeHandle node, ros::NodeHandle private_nh) : data_(new z
   // subscribe to zvisionlidarScan packets
   zvision_lidar_scan_ = node.subscribe("zvision_lidar_packets", 20, &Convert::processScan, (Convert*)this,
                                  ros::TransportHints().tcpNoDelay(true));
+
 }
 
 void Convert::callback(zvision_lidar_pointcloud::CloudNodeConfig& config, uint32_t level)
@@ -114,6 +114,12 @@ void Convert::processScan(const zvision_lidar_msgs::zvisionLidarScan::ConstPtr& 
   else if(device_type_ == zvision::MLX){
       outPoints->height = 1;
       outPoints->width = 96000;/*96000 points per scan*/
+      outPoints->is_dense = false;
+      outPoints->resize(outPoints->height * outPoints->width);
+  }
+  else if(device_type_ == zvision::MLXA1){
+      outPoints->height = 1;
+      outPoints->width = 114000;/*114000 points per scan*/
       outPoints->is_dense = false;
       outPoints->resize(outPoints->height * outPoints->width);
   }

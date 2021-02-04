@@ -62,7 +62,7 @@ static const int GROUP_PER_PACKET = 40;
 static const int POINT_PER_GROUP_ML30 = 3;
 static const int POINT_PER_GROUP = 8;
 static const int POINT_PER_GROUP_MLX = 3;
-static const int MAX_POINTS = 102400;
+static const int MAX_POINTS = 204800;
 
 /** \brief ZVISION LIDAR data conversion class */
 class RawData

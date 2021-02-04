@@ -299,6 +299,33 @@ namespace zvision {
                 }
                 cal.model = MLX;
             }
+            else if (38000 < lines.size())
+            {
+                cal.data.resize(38000 * 3 * 2);
+                int f = 0;
+                for(f = 0; f < lines.size();f++)
+                {
+                    std::vector<std::string>& datas = lines[f];
+                    if(datas.size() && (datas[0] == std::string("1")))
+                        break;
+                }
+                for (int i = 0; i < 38000; i++)
+                {
+                    const int column = 7;
+                    std::vector<std::string>& datas = lines[i + f];
+                    if (datas.size() != column)
+                    {
+                        ret = -1;
+                        ROS_ERROR_STREAM("Resolve calibration file data error.");
+                        break;
+                    }
+                    for (int j = 1; j < column; j++)
+                    {
+                        cal.data[i * 6 + j - 1] = static_cast<float>(std::atof(datas[j].c_str()));
+                    }
+                }
+                cal.model = MLXA1;
+            }
             else
             {
                 cal.model = Unknown;
@@ -354,13 +381,33 @@ namespace zvision {
                 point_cal.sin_ele = std::sin(ele);
                 point_cal.cos_azi = std::cos(azi);
                 point_cal.sin_azi = std::sin(azi);
-
             }
         }
         else if (MLX == cal.model)
         {
             const int start = 3;
             int fov_index[start] = { 2, 1, 0 };
+            for (unsigned int i = 0; i < cal.data.size() / 2; ++i)
+            {
+                int start_number = i % start;
+                int group_number = i / start;
+                int point_numer = group_number * start + fov_index[start_number];
+                float azi = static_cast<float>(cal.data[point_numer * 2] / 180.0 * 3.1416);
+                float ele = static_cast<float>(cal.data[point_numer * 2 + 1] / 180.0 * 3.1416);
+
+                PointCalibrationData& point_cal = cal_lut.data[i];
+                point_cal.ele = ele;
+                point_cal.azi = azi;
+                point_cal.cos_ele = std::cos(ele);
+                point_cal.sin_ele = std::sin(ele);
+                point_cal.cos_azi = std::cos(azi);
+                point_cal.sin_azi = std::sin(azi);
+            }
+        }
+        else if (MLXA1 == cal.model)
+        {
+            const int start = 3;
+            int fov_index[start] = { 0, 1, 2 };
             for (unsigned int i = 0; i < cal.data.size() / 2; ++i)
             {
                 int start_number = i % start;
@@ -398,6 +445,9 @@ namespace zvision {
         case MLX:
             dev_string = "MLX";
             break;
+        case MLXA1:
+            dev_string = "MLXA1";
+            break;
         default:
             break;
         }
@@ -413,6 +463,8 @@ namespace zvision {
             dev_ty = LidarType::ML30SA1;
         else if(tp == "MLX")
             dev_ty = LidarType::MLX;
+        else if(tp == "MLXA1")
+            dev_ty = LidarType::MLXA1;
         else
             dev_ty = LidarType::Unknown;
 
@@ -427,6 +479,8 @@ namespace zvision {
         else if(LidarType::ML30SA1 == cal_lut.model)
             fovs = 8;
         else if(LidarType::MLX == cal_lut.model)
+            fovs = 3;
+        else if(LidarType::MLXA1 == cal_lut.model)
             fovs = 3;
         else
             ;

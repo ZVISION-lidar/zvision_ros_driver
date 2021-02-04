@@ -49,7 +49,7 @@ void RawData::loadConfigFile(ros::NodeHandle node, ros::NodeHandle private_nh)
   double xt, yt, zt, xr, yr, zr;
   private_nh.param("use_lidar_time", this->use_lidar_time_, false);/*default is local timestamp*/
   private_nh.param("angle_path", anglePath, std::string(""));/*angle file *.cal*/
-  private_nh.param("model", model, std::string("ML30S-A1"));/*device type*/
+  private_nh.param("model", model, std::string("ML30SA1"));/*device type*/
   private_nh.param("device_ip", this->dev_ip_, std::string(""));/*device ip*/
 
   if(model == std::string("ML30B1"))
@@ -58,6 +58,8 @@ void RawData::loadConfigFile(ros::NodeHandle node, ros::NodeHandle private_nh)
       device_type_ = zvision::ML30SA1;
   else if(model == std::string("MLX"))
       device_type_ = zvision::MLX;
+  else if(model == std::string("MLXA1"))
+      device_type_ = zvision::MLXA1;
   else
       device_type_ = zvision::Unknown;
 
@@ -287,6 +289,76 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
       for (int group = 0; group < GROUP_PER_PACKET_MLX; group++)   // 1 packet:80 data group
       {
           const unsigned char *pc = data + group * 8 * 2;/*group address*/
+          int group_index = udp_seq * GROUP_PER_PACKET_MLX * POINT_PER_GROUP_MLX + group * POINT_PER_GROUP_MLX;/*group number, to search the angle file *.cal*/
+
+          for (int laser_id = 0; laser_id < POINT_PER_GROUP_MLX; laser_id++)/*3 Points per laser*/
+          {
+              int point_num = group_index + laser_id;
+              int disTemp = 0;
+
+              //dis_high
+              unsigned char Dis_High = (u_char)(pc[4 + 4 * laser_id]);
+              unsigned char Dis_Low  = (u_char)(pc[5 + 4 * laser_id]);
+              unsigned char Int_High = (u_char)(pc[6 + 4 * laser_id]);
+              unsigned char Int_Low  = (u_char)(pc[7 + 4 * laser_id]);
+
+              disTemp = (((Dis_High << 8) + Dis_Low) << 3) + (int)((Int_High & 0xE0) >> 5);
+              double distantce_real_live = disTemp * 0.0015;/*distance from udp*/
+              intensity = (((Int_High & 0x1F) << 8) + (Int_Low));/*reflectivity from udp*/
+              intensity = intensity & 0x3FF;
+
+              zvision::PointCalibrationData& cal = this->cal_lut_->data[point_num];
+              point.x = distantce_real_live * cal.cos_ele * cal.sin_azi;/*x*/
+              point.y = distantce_real_live * cal.cos_ele * cal.cos_azi;/*y*/
+              point.z = distantce_real_live * cal.sin_ele;/*z*/
+              point.intensity = intensity;
+
+              /*apply transform*/
+              double Ax = x_rotation;
+              double Ay = y_rotation;
+              double Az = z_rotation;
+              double x, y, z;
+              pcl::PointXYZI sourPoint   = point;
+              pcl::PointXYZI xTransPoint = point;
+              pcl::PointXYZI yTransPoint = point;
+              pcl::PointXYZI zTransPoint = point;
+
+              x = sourPoint.x;/*X rotation*/
+              y = sourPoint.y;
+              z = sourPoint.z;
+              xTransPoint.x = x;
+              xTransPoint.y = y * std::cos(Ax) - z * std::sin(Ax);
+              xTransPoint.z = y * std::sin(Ax) + z * std::cos(Ax);
+
+              x = xTransPoint.x;/*Y rotation*/
+              y = xTransPoint.y;
+              z = xTransPoint.z;
+
+              yTransPoint.x = x * std::cos(Ay) + z * std::sin(Ay);
+              yTransPoint.y = y;
+              yTransPoint.z = x * (-std::sin(Ay)) + z * std::cos(Ay);
+
+              x = yTransPoint.x;/*Z rotation*/
+              y = yTransPoint.y;
+              z = yTransPoint.z;
+
+              zTransPoint.x = x * std::cos(Az) + y * (-std::sin(Az));
+              zTransPoint.y = x * std::sin(Az) + y * std::cos(Az);
+              zTransPoint.z = z;
+
+              point.x = zTransPoint.x + x_trans;
+              point.y = zTransPoint.y + y_trans;
+              point.z = zTransPoint.z + z_trans;
+
+              pointcloud->at(point_num) = point;/*not filled when pkt loss*/
+          }
+      }
+  }
+  else if(device_type_ == zvision::MLXA1)
+  {
+      for (int group = 0; group < GROUP_PER_PACKET_MLX; group++)   // 1 packet:80 data group
+      {
+          const unsigned char *pc = data + group * 8 * 2 + 4;/*group address*/
           int group_index = udp_seq * GROUP_PER_PACKET_MLX * POINT_PER_GROUP_MLX + group * POINT_PER_GROUP_MLX;/*group number, to search the angle file *.cal*/
 
           for (int laser_id = 0; laser_id < POINT_PER_GROUP_MLX; laser_id++)/*3 Points per laser*/

@@ -123,6 +123,12 @@ void Convert::processScan(const zvision_lidar_msgs::zvisionLidarScan::ConstPtr& 
       outPoints->is_dense = false;
       outPoints->resize(outPoints->height * outPoints->width);
   }
+  else if(device_type_ == zvision::MLXS){
+      outPoints->height = 1;
+      outPoints->width = 108000;/*108000 points per scan*/
+      outPoints->is_dense = false;
+      outPoints->resize(outPoints->height * outPoints->width);
+  }
 
   for (size_t i = 0; i < scanMsg->packets.size(); ++i)
   {

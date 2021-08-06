@@ -58,10 +58,12 @@ static const int PACKET_SIZE_ML30 = 1304;//PACKET_SIZE
 static const int PACKET_SIZE_ML30S_A1 = 1346;
 static const int GROUP_PER_PACKET_ML30 = 80;
 static const int GROUP_PER_PACKET_MLX = 80;
+static const int GROUP_PER_PACKET_MLXS = 80;
 static const int GROUP_PER_PACKET = 40;
 static const int POINT_PER_GROUP_ML30 = 3;
 static const int POINT_PER_GROUP = 8;
 static const int POINT_PER_GROUP_MLX = 3;
+static const int POINT_PER_GROUP_MLXS = 3;
 static const int MAX_POINTS = 204800;
 
 /** \brief ZVISION LIDAR data conversion class */

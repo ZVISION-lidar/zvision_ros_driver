@@ -36,6 +36,7 @@ zvisionLidarDriver::zvisionLidarDriver(ros::NodeHandle node, ros::NodeHandle pri
   double packet_rate_ML30S_A1 = 160 * fre;
   double packet_rate_MLX = 400 * fre;
   double packet_rate_MLXA1 = 475 * fre;
+  double packet_rate_MLXS = 450 * fre;
   std::string model_full_name;
 
   // product model
@@ -51,6 +52,9 @@ zvisionLidarDriver::zvisionLidarDriver(ros::NodeHandle node, ros::NodeHandle pri
   }
   else if(config_.model == "MLXA1"){
     model_full_name = "ZVISION-LiDAR-MLXA1";
+  }
+  else if(config_.model == "MLXS"){
+    model_full_name = "ZVISION-LiDAR-MLXS";
   }
   else
   {
@@ -220,6 +224,48 @@ zvisionLidarDriver::zvisionLidarDriver(ros::NodeHandle node, ros::NodeHandle pri
       {
           // read data from packet capture file
           input_.reset(new zvision_lidar_driver::InputPCAP(private_nh, port_to_recv_udppkt, packet_rate_MLXA1, dump_file));
+      }
+      else
+      {
+          // read data from live socket
+          input_.reset(new zvision_lidar_driver::InputSocket(private_nh, port_to_recv_udppkt));
+      }
+      // raw packet output topic
+      output_ = node.advertise<zvision_lidar_msgs::zvisionLidarScan>("zvision_lidar_packets", 20);
+  }
+  else if(config_.model == "MLXS"){
+      int npackets = 450;
+      private_nh.param("npackets", config_.npackets, npackets);
+      ROS_INFO_STREAM("publishing " << config_.npackets << " packets per scan");
+
+      std::string dump_file;
+      private_nh.param("pcap", dump_file, std::string(""));
+
+      int port_to_recv_udppkt;
+      private_nh.param("udp_port", port_to_recv_udppkt, (int)UDP_DATA_PORT_NUMBER);
+
+      // Initialize dynamic reconfigure
+      srv_ = boost::make_shared<dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig> >(private_nh);
+      dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig>::CallbackType f;
+      f = boost::bind(&zvisionLidarDriver::callback, this, _1, _2);
+      srv_->setCallback(f);  // Set callback function und call initially
+
+      // initialize diagnostics
+      diagnostics_.setHardwareID(deviceName);
+      const double diag_freq = packet_rate_MLXS / config_.npackets;
+      diag_max_freq_ = diag_freq;
+      diag_min_freq_ = diag_freq;
+
+      using namespace diagnostic_updater;
+      diag_topic_.reset(new TopicDiagnostic("zvision_lidar_packets", diagnostics_,
+                                            FrequencyStatusParam(&diag_min_freq_, &diag_max_freq_, 0.1, 10),
+                                            TimeStampStatusParam()));
+
+      // open zvision lidar input device or file
+      if (dump_file != "")  // have PCAP file?
+      {
+          // read data from packet capture file
+          input_.reset(new zvision_lidar_driver::InputPCAP(private_nh, port_to_recv_udppkt, packet_rate_MLXS, dump_file));
       }
       else
       {

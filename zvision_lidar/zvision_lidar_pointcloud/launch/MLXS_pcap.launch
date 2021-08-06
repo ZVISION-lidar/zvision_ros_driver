@@ -1,0 +1,37 @@
+<launch>
+  <arg name="manager" default="zvision_lidar_nodelet_manager" />
+  <arg name="model" default="MLXS" />
+  <arg name="device_ip" default="192.168.10.108" />
+  <arg name="udp_port" default="2368" />
+  <arg name="angle_path" default="$(find zvision_lidar_pointcloud)/data/MLXS_Default.cal" />
+  <arg name="pcap" default="$(find zvision_lidar_pointcloud)/data/MLXS_Default.pcap" />
+
+  <!-- start nodelet manager -->
+  <node pkg="nodelet" type="nodelet" name="$(arg manager)" args="manager" output="screen"/>
+
+  <!-- load driver nodelet into it (udp packets)-->
+  <node pkg="nodelet" type="nodelet" name="$(arg manager)_driver"
+        args="load zvision_lidar_driver/DriverNodelet $(arg manager)" output="screen">
+    <param name="model" value="$(arg model)"/>
+    <param name="device_ip" value="$(arg device_ip)" />
+    <param name="udp_port" value="$(arg udp_port)" />
+	<param name="pcap" value="$(arg pcap)" />
+  </node>
+
+  <!-- load driver nodelet into it (udp packet to pointcloud)-->
+  <node pkg="nodelet" type="nodelet" name="$(arg manager)_cloud"
+        args="load zvision_lidar_pointcloud/CloudNodelet $(arg manager)" output="screen">
+    <param name="model" value="$(arg model)"/>
+    <param name="angle_path" value="$(arg angle_path)" />
+    <param name="device_ip" value="$(arg device_ip)" />
+    <param name="x_tra" value="0.0" />
+    <param name="y_tra" value="0.0" />
+    <param name="z_tra" value="0.0" />
+    <param name="x_rot" value="0.0" />
+    <param name="y_rot" value="0.0" />
+    <param name="z_rot" value="0.0" />
+    <param name="use_lidar_time" value="false" />
+  </node>
+  
+  <node name="rviz" pkg="rviz" type="rviz"  args="-d $(find zvision_lidar_pointcloud)/rviz_cfg/zvision_lidar.rviz" />
+</launch>

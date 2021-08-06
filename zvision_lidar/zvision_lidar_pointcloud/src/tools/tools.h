@@ -27,6 +27,7 @@ namespace zvision {
         ML30SA1,
         MLX,
         MLXA1,
+        MLXS,
         Unknown
     }LidarType;
 

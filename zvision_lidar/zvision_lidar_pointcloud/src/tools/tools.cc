@@ -113,6 +113,12 @@ namespace zvision {
             data_size = (6400 * 8 * 2);
             cal.model = ML30SA1;
         }
+        else if (0 == dev_code.compare("XS    "))
+        {
+            total_packet = 844;
+            data_size = (36000 * 3 * 2);
+            cal.model = MLXS;
+        }
         else
         {
             ROS_ERROR_STREAM("Calibration packet identify error");
@@ -205,6 +211,7 @@ namespace zvision {
 
     int LidarTools::ReadCalibrationFile(std::string filename, CalibrationData& cal)
     {
+        const int file_min_lines = 4;
         std::ifstream file;
         file.open(filename, std::ios::in);
         std::string line;
@@ -228,109 +235,241 @@ namespace zvision {
                 }
             }
             file.close();
-            if (10000 == lines.size())
-            {
-                cal.data.resize(60000);
-                for (int i = 0; i < 10000; i++)
-                {
-                    const int column = 7;
 
-                    std::vector<std::string>& datas = lines[i];
-                    if (datas.size() != column)
+            if (lines.size() < file_min_lines)
+            {
+                ROS_ERROR("Calbration file line size [%d] is not valid.\n", lines.size());
+                return -1;
+            }
+
+            // filter #
+            int curr = 0;
+            for (auto& line : lines)
+            {
+                if ('#' != line[0][0])
+                    break;
+                curr++;
+            }
+
+            // read version info
+            std::string version_str;
+            if ((lines[curr].size() >= 2) && (lines[curr][0] == "VERSION"))
+            {
+                version_str = lines[curr][lines[curr].size() - 1];
+                curr++;
+            }
+
+            // read scan mode
+            std::string mode_str;
+            if ((lines[curr].size() >= 2) && (lines[curr][0] == "Mode"))
+            {
+                mode_str = lines[curr][lines[curr].size() - 1];
+                curr++;
+            }
+            int ret = 0;
+            if (mode_str.size())
+            {
+                if ("MLX_A1_190" == mode_str)
+                {
+                    if ((lines.size() - curr) < 38000)//check the file lines
+                        return -1;
+
+                    cal.data.resize(38000 * 3 * 2);
+                    for (int i = 0; i < 38000; i++)
                     {
-                        ret = -1;
-                        ROS_ERROR_STREAM("Resolve calibration file data error.");
-                        break;
-                    }
-                    for (int j = 1; j < column; j++)
-                    {
-                        int fov = (j - 1) % 3;
-                        if (0 == ((j - 1) / 3))//azimuth
+                        const int column = 7;
+
+                        std::vector<std::string>& datas = lines[i + curr];
+                        if (datas.size() != column)
                         {
-                            cal.data[i * 6 + fov * 2] = static_cast<float>(std::atof(datas[j].c_str()));
+                            ret = -1;
+                            break;
                         }
-                        else//elevation
+                        for (int j = 1; j < column; j++)
                         {
-                            cal.data[i * 6 + fov * 2 + 1] = static_cast<float>(std::atof(datas[j].c_str()));
+                            cal.data[i * 6 + j - 1] = static_cast<float>(std::atof(datas[j].c_str()));
                         }
                     }
+                    cal.model = MLXA1;
                 }
-                cal.model = ML30B1;
-            }
-            else if (6400 == lines.size())
-            {
-                cal.data.resize(6400 * 8 * 2);
-                for (int i = 0; i < 6400; i++)
+                #if 0
+                else if (("ML30S_160_1_2" == mode_str) || ("ML30S_160_1_4" == mode_str))
                 {
-                    const int column = 17;
+                    int group = 3200;
+                    if ("ML30S_160_1_2" == mode_str)
+                    {
+                        group = 3200;
+                        cal.scan_mode = ScanMode::ScanML30SA1_160_1_2;
+                    }
+                    else
+                    {
+                        group = 1600;
+                        cal.scan_mode = ScanMode::ScanML30SA1_160_1_4;
+                    }
 
-                    std::vector<std::string>& datas = lines[i];
-                    if (datas.size() != column)
-                    {
-                        ret = -1;
-                        ROS_ERROR_STREAM("Resolve calibration file data error.");
-                        break;
-                    }
-                    for (int j = 1; j < column; j++)
-                    {
-                        cal.data[i * 16 + j - 1] = static_cast<float>(std::atof(datas[j].c_str()));
-                    }
-                }
-                cal.model = ML30SA1;
-            }
-            else if (32000 == lines.size())
-            {
-                cal.data.resize(32000 * 3 * 2);
-                for (int i = 0; i < 32000; i++)
-                {
-                    const int column = 7;
+                    if ((lines.size() - curr) < group)//check the file lines
+                        return -1;
 
-                    std::vector<std::string>& datas = lines[i];
-                    if (datas.size() != column)
+                    cal.data.resize(group * 8 * 2);
+                    for (int i = 0; i < group; i++)
                     {
-                        ret = -1;
-                        ROS_ERROR_STREAM("Resolve calibration file data error.");
-                        break;
+                        const int column = 17;
+
+                        std::vector<std::string>& datas = lines[i + curr];
+                        if (datas.size() != column)
+                        {
+                            ret = InvalidContent;
+                            break;
+                        }
+                        for (int j = 1; j < column; j++)
+                        {
+                            cal.data[i * 16 + j - 1] = static_cast<float>(std::atof(datas[j].c_str()));
+                        }
                     }
-                    for (int j = 1; j < column; j++)
+                    cal.device_type = DeviceType::LidarML30SA1;
+                    cal.description = "";
+                    for (int i = 0; i < curr; i++)
                     {
-                        cal.data[i * 6 + j - 1] = static_cast<float>(std::atof(datas[j].c_str()));
+                        for (int j = 0; j < lines[i].size(); j++)
+                            cal.description += lines[i][j];
+                        cal.description += "\n";
                     }
                 }
-                cal.model = MLX;
-            }
-            else if (38000 < lines.size())
-            {
-                cal.data.resize(38000 * 3 * 2);
-                int f = 0;
-                for(f = 0; f < lines.size();f++)
+                #endif
+                else if ("MLXs_180" == mode_str)
                 {
-                    std::vector<std::string>& datas = lines[f];
-                    if(datas.size() && (datas[0] == std::string("1")))
-                        break;
+                    if ((lines.size() - curr) < 36000)//check the file lines
+                        return -1;
+
+                    cal.data.resize(36000 * 3 * 2);
+                    for (int i = 0; i < 36000; i++)
+                    {
+                        const int column = 7;
+
+                        std::vector<std::string>& datas = lines[i + curr];
+                        if (datas.size() != column)
+                        {
+                            ret = -1;
+                            break;
+                        }
+                        for (int j = 1; j < column; j++)
+                        {
+                            cal.data[i * 6 + j - 1] = static_cast<float>(std::atof(datas[j].c_str()));
+                        }
+                    }
+                    cal.model = MLXS;
                 }
-                for (int i = 0; i < 38000; i++)
+                else
                 {
-                    const int column = 7;
-                    std::vector<std::string>& datas = lines[i + f];
-                    if (datas.size() != column)
-                    {
-                        ret = -1;
-                        ROS_ERROR_STREAM("Resolve calibration file data error.");
-                        break;
-                    }
-                    for (int j = 1; j < column; j++)
-                    {
-                        cal.data[i * 6 + j - 1] = static_cast<float>(std::atof(datas[j].c_str()));
-                    }
+                    return -1;
                 }
-                cal.model = MLXA1;
             }
             else
             {
-                cal.model = Unknown;
-                ret = -1;
-                ROS_ERROR_STREAM("Invalid calibration file length.");
+                if (10000 == lines.size())
+                {
+                    cal.data.resize(60000);
+                    for (int i = 0; i < 10000; i++)
+                    {
+                        const int column = 7;
+
+                        std::vector<std::string>& datas = lines[i];
+                        if (datas.size() != column)
+                        {
+                            ret = -1;
+                            ROS_ERROR_STREAM("Resolve calibration file data error.");
+                            break;
+                        }
+                        for (int j = 1; j < column; j++)
+                        {
+                            int fov = (j - 1) % 3;
+                            if (0 == ((j - 1) / 3))//azimuth
+                            {
+                                cal.data[i * 6 + fov * 2] = static_cast<float>(std::atof(datas[j].c_str()));
+                            }
+                            else//elevation
+                            {
+                                cal.data[i * 6 + fov * 2 + 1] = static_cast<float>(std::atof(datas[j].c_str()));
+                            }
+                        }
+                    }
+                    cal.model = ML30B1;
+                }
+                else if (6400 == lines.size())
+                {
+                    cal.data.resize(6400 * 8 * 2);
+                    for (int i = 0; i < 6400; i++)
+                    {
+                        const int column = 17;
+
+                        std::vector<std::string>& datas = lines[i];
+                        if (datas.size() != column)
+                        {
+                            ret = -1;
+                            ROS_ERROR_STREAM("Resolve calibration file data error.");
+                            break;
+                        }
+                        for (int j = 1; j < column; j++)
+                        {
+                            cal.data[i * 16 + j - 1] = static_cast<float>(std::atof(datas[j].c_str()));
+                        }
+                    }
+                    cal.model = ML30SA1;
+                }
+                else if (32000 == lines.size())
+                {
+                    cal.data.resize(32000 * 3 * 2);
+                    for (int i = 0; i < 32000; i++)
+                    {
+                        const int column = 7;
+
+                        std::vector<std::string>& datas = lines[i];
+                        if (datas.size() != column)
+                        {
+                            ret = -1;
+                            ROS_ERROR_STREAM("Resolve calibration file data error.");
+                            break;
+                        }
+                        for (int j = 1; j < column; j++)
+                        {
+                            cal.data[i * 6 + j - 1] = static_cast<float>(std::atof(datas[j].c_str()));
+                        }
+                    }
+                    cal.model = MLX;
+                }
+                else if (38000 < lines.size())
+                {
+                    cal.data.resize(38000 * 3 * 2);
+                    int f = 0;
+                    for(f = 0; f < lines.size();f++)
+                    {
+                        std::vector<std::string>& datas = lines[f];
+                        if(datas.size() && (datas[0] == std::string("1")))
+                            break;
+                    }
+                    for (int i = 0; i < 38000; i++)
+                    {
+                        const int column = 7;
+                        std::vector<std::string>& datas = lines[i + f];
+                        if (datas.size() != column)
+                        {
+                            ret = -1;
+                            ROS_ERROR_STREAM("Resolve calibration file data error.");
+                            break;
+                        }
+                        for (int j = 1; j < column; j++)
+                        {
+                            cal.data[i * 6 + j - 1] = static_cast<float>(std::atof(datas[j].c_str()));
+                        }
+                    }
+                    cal.model = MLXA1;
+                }
+                else
+                {
+                    cal.model = Unknown;
+                    ret = -1;
+                    ROS_ERROR_STREAM("Invalid calibration file length.");
+                }
             }
 
             return ret;
@@ -404,7 +543,7 @@ namespace zvision {
                 point_cal.sin_azi = std::sin(azi);
             }
         }
-        else if (MLXA1 == cal.model)
+        else if ((MLXA1 == cal.model) || (MLXS == cal.model))
         {
             const int start = 3;
             int fov_index[start] = { 0, 1, 2 };
@@ -448,6 +587,9 @@ namespace zvision {
         case MLXA1:
             dev_string = "MLXA1";
             break;
+        case MLXS:
+            dev_string = "MLXS";
+            break;
         default:
             break;
         }
@@ -465,6 +607,8 @@ namespace zvision {
             dev_ty = LidarType::MLX;
         else if(tp == "MLXA1")
             dev_ty = LidarType::MLXA1;
+        else if(tp == "MLXS")
+            dev_ty = LidarType::MLXS;
         else
             dev_ty = LidarType::Unknown;
 
@@ -481,6 +625,8 @@ namespace zvision {
         else if(LidarType::MLX == cal_lut.model)
             fovs = 3;
         else if(LidarType::MLXA1 == cal_lut.model)
+            fovs = 3;
+        else if(LidarType::MLXS == cal_lut.model)
             fovs = 3;
         else
             ;

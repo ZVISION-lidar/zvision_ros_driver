@@ -535,7 +535,7 @@ void RawData::getTimeStampFromUdpPkt(const zvision_lidar_msgs::zvisionLidarPacke
     {
         struct tm tm_;
         tm_.tm_year = data[1304 - 20 + 0] + 2000 - 1900;
-        tm_.tm_mon = data[1304 - 20 + 1];
+        tm_.tm_mon = data[1304 - 20 + 1] - 1;
         tm_.tm_mday = data[1304 - 20 + 2];
         tm_.tm_hour = data[1304 - 20 + 3];
         tm_.tm_min = data[1304 - 20 + 4];

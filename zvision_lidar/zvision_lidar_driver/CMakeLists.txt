@@ -50,3 +50,16 @@ catkin_package(
 
 add_subdirectory(src)
 
+install(FILES nodelet_zvision_lidar.xml
+        DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+)
+
+
+
+
+
+
+
+
+
+

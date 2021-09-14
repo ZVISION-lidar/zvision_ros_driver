@@ -28,3 +28,34 @@ target_link_libraries(zvision_lidar_node
 	${libpcap_LIBRARIES}
 )
 
+install(TARGETS zvision_lidar_input
+        LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+)
+
+install(TARGETS zvision_lidar_driver
+        LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+)
+
+install(TARGETS zvision_lidar_node
+        RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+        COMPONENT main
+)
+install(TARGETS zvision_lidar_driver_nodelet
+        LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

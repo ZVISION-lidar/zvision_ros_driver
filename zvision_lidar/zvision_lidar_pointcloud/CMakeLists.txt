@@ -1,44 +1,105 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.5)
 project(zvision_lidar_pointcloud)
 
-add_compile_options(-std=c++11)
-set(CMAKE_BUILD_TYPE Release)#RelWithDebInfo
-set(${PROJECT_NAME}_CATKIN_DEPS
-    angles
-    nodelet
-    pcl_ros
-    roscpp
-    roslib
-    sensor_msgs
-    tf
-    zvision_lidar_driver
-    zvision_lidar_msgs
-    dynamic_reconfigure
-)
+# Default to C++14
+if(NOT CMAKE_CXX_STANDARD)
+    set(CMAKE_CXX_STANDARD 14)
+endif()
 
-find_package(catkin REQUIRED COMPONENTS
-             ${${PROJECT_NAME}_CATKIN_DEPS} pcl_conversions)
-find_package(Boost COMPONENTS signals)
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
+
+find_package(ament_cmake REQUIRED)
+find_package(angles REQUIRED)
+find_package(diagnostic_updater REQUIRED)
+find_package(Eigen3 REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(message_filters REQUIRED)
+find_package(PCL 1.10 REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(rclcpp_components REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(zvision_lidar_msgs REQUIRED)
+# find_package(zvision_lidar_driver REQUIRED)
+# Resolve system dependency on yaml-cpp, which apparently does not
+# provide a CMake find_package() module.
 find_package(PkgConfig REQUIRED)
-include_directories(${catkin_INCLUDE_DIRS}
-  ${dynamic_reconfigure_PACKAGE_PATH}/cmake/cfgbuild.cmake
-)
+pkg_check_modules(YAML_CPP REQUIRED yaml-cpp)
+find_path(YAML_CPP_INCLUDE_DIR
+        NAMES yaml_cpp.h
+        PATHS ${YAML_CPP_INCLUDE_DIRS})
+find_library(YAML_CPP_LIBRARY
+        NAMES YAML_CPP
+        PATHS ${YAML_CPP_LIBRARY_DIRS})
 
-generate_dynamic_reconfigure_options(cfg/CloudNode.cfg)
-catkin_package(
-    CATKIN_DEPENDS ${${PROJECT_NAME}_CATKIN_DEPS}
-    CATKIN_DEPENDS message_runtime std_msgs
-    )
+link_directories(${YAML_CPP_LIBRARY_DIRS})
 
-add_subdirectory(src)
+if(NOT ${YAML_CPP_VERSION} VERSION_LESS "0.5")
+    add_definitions(-DHAVE_NEW_YAMLCPP)
+endif()
 
-install(FILES cloud_nodelets.xml
-        DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-)
+include_directories(include/zvision_lidar_pointcloud include/tools ${PCL_INCLUDE_DIRS})
+add_definitions(${PCL_DEFINITIONS})
 
-install(DIRECTORY launch/
-        DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
-)
+# add_library(zvision_lidar_tools SHARED
+#         src/tools/tools.cc src/tools/tcp_client.cc)      
+# ament_target_dependencies(zvision_lidar_tools
+#         rclcpp
+# )
+
+add_subdirectory(src/tools)
+add_subdirectory(src/lib)
+
+add_library(convert SHARED
+        src/conversions/convert.cc)
+
+ament_target_dependencies(convert
+        diagnostic_updater
+        Eigen3
+        rclcpp
+        rclcpp_components
+        tf2
+        zvision_lidar_msgs
+        geometry_msgs
+        sensor_msgs
+        )
+target_link_libraries(convert
+        zvision_rawdata
+        zvision_lidar_tools
+        ${PCL_LIBRARIES}
+        ${YAML_CPP_LIBRARIES})
+install(TARGETS convert
+        ARCHIVE DESTINATION lib
+        LIBRARY DESTINATION lib
+        RUNTIME DESTINATION bin
+        )
+rclcpp_components_register_nodes(convert
+        "zvision_lidar_pointcloud::Convert")
+
+
+
+
+
+add_executable(zvision_convert_node
+        src/conversions/convert_node.cc)
+ament_target_dependencies(zvision_convert_node
+        rclcpp
+        )
+target_link_libraries(zvision_convert_node convert ${PCL_LIBRARIES})
+install(TARGETS zvision_convert_node
+        DESTINATION lib/${PROJECT_NAME}
+        )
+
+
+install(DIRECTORY include/${PROJECT_NAME}/
+  DESTINATION include/${PROJECT_NAME})
+install(DIRECTORY config launch
+  DESTINATION share/${PROJECT_NAME})
+
+ament_package()
 
 
 

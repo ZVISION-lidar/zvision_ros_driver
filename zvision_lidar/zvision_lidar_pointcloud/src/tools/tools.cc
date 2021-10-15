@@ -25,7 +25,7 @@
 #include <string>
 #include <sstream>
 #include <thread>
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 #include <arpa/inet.h>
 #include "tcp_client.h"
 
@@ -57,7 +57,7 @@ namespace zvision {
         int ret = client.Connect(ip);
         if (ret)
         {
-            ROS_ERROR_STREAM("Connect error: " << client.GetSysErrorCode());
+            std::cout << "error" << std::endl;//ROS_ERROR_STREAM("Connect error: " << client.GetSysErrorCode());
             return -1;
         }
 
@@ -121,7 +121,7 @@ namespace zvision {
         }
         else
         {
-            ROS_ERROR_STREAM("Calibration packet identify error");
+            std::cout << "error" << std::endl;//ROS_ERROR_STREAM("Calibration packet identify error");
             client.Close();
             return -1;
         }
@@ -137,13 +137,13 @@ namespace zvision {
         }
         if (0x00 == check_all_00)
         {
-            ROS_ERROR_STREAM("Check calibration data error, data is all 0x00.\n");
+            std::cout << "error" << std::endl;//ROS_ERROR_STREAM("Check calibration data error, data is all 0x00.\n");
             client.Close();
             return -1;
         }
         if (0xFF == check_all_ff)
         {
-            ROS_ERROR_STREAM("Check calibration data error, data is all 0xFF.\n");
+            std::cout << "error" << std::endl;//ROS_ERROR_STREAM("Check calibration data error, data is all 0xFF.\n");
             client.Close();
             return -1;
         }
@@ -168,7 +168,7 @@ namespace zvision {
             int ret = client.SyncRecv(cal_recv, cal_pkt_len);
             if (ret)
             {
-                ROS_ERROR_STREAM("Receive calibration data error\n");
+                std::cout << "error" << std::endl;//ROS_ERROR_STREAM("Receive calibration data error\n");
                 client.Close();
                 return -1;
             }
@@ -188,21 +188,21 @@ namespace zvision {
 
         if (client.SyncRecv(recv, recv_len))
         {
-            ROS_ERROR_STREAM("Recv ack error.\n");
+            std::cout << "error" << std::endl;//ROS_ERROR_STREAM("Recv ack error.\n");
             client.Close();
             return -1;
         }
         //printf("recv ack ok.\n");
         if (!CheckDeviceRet(recv))
         {
-            ROS_ERROR_STREAM("Check ack error.\n");
+            std::cout << "error" << std::endl;//ROS_ERROR_STREAM("Check ack error.\n");
             client.Close();
             return -1;
         }
 
         if(data_size != data.size())
         {
-            ROS_ERROR("Calbration data size [%6lu] is not valid, [%6u] wanted.\n", data.size(), data_size);
+            std::cout << "error" << std::endl;//ROS_ERROR("Calbration data size [%6lu] is not valid, [%6u] wanted.\n", data.size(), data_size);
             return -1;
         }
 
@@ -238,7 +238,7 @@ namespace zvision {
 
             if (lines.size() < file_min_lines)
             {
-                ROS_ERROR("Calbration file line size [%d] is not valid.\n", lines.size());
+                std::cout << "error" << std::endl;//ROS_ERROR("Calbration file line size [%d] is not valid.\n", lines.size());
                 return -1;
             }
 
@@ -377,7 +377,7 @@ namespace zvision {
                         if (datas.size() != column)
                         {
                             ret = -1;
-                            ROS_ERROR_STREAM("Resolve calibration file data error.");
+                            std::cout << "error" << std::endl;//ROS_ERROR_STREAM("Resolve calibration file data error.");
                             break;
                         }
                         for (int j = 1; j < column; j++)
@@ -406,7 +406,7 @@ namespace zvision {
                         if (datas.size() != column)
                         {
                             ret = -1;
-                            ROS_ERROR_STREAM("Resolve calibration file data error.");
+                            std::cout << "error" << std::endl;//ROS_ERROR_STREAM("Resolve calibration file data error.");
                             break;
                         }
                         for (int j = 1; j < column; j++)
@@ -427,7 +427,7 @@ namespace zvision {
                         if (datas.size() != column)
                         {
                             ret = -1;
-                            ROS_ERROR_STREAM("Resolve calibration file data error.");
+                            std::cout << "error" << std::endl;//ROS_ERROR_STREAM("Resolve calibration file data error.");
                             break;
                         }
                         for (int j = 1; j < column; j++)
@@ -454,7 +454,7 @@ namespace zvision {
                         if (datas.size() != column)
                         {
                             ret = -1;
-                            ROS_ERROR_STREAM("Resolve calibration file data error.");
+                            std::cout << "error" << std::endl;//ROS_ERROR_STREAM("Resolve calibration file data error.");
                             break;
                         }
                         for (int j = 1; j < column; j++)
@@ -468,7 +468,7 @@ namespace zvision {
                 {
                     cal.model = Unknown;
                     ret = -1;
-                    ROS_ERROR_STREAM("Invalid calibration file length.");
+                    std::cout << "error" << std::endl;//ROS_ERROR_STREAM("Invalid calibration file length.");
                 }
             }
 
@@ -476,7 +476,7 @@ namespace zvision {
         }
         else
         {
-            ROS_ERROR_STREAM("Open calibration file error.");
+            std::cout << "error" << std::endl;//ROS_ERROR_STREAM("Open calibration file error.");
             return -1;
         }
     }

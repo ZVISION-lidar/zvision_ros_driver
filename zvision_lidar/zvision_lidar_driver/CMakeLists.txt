@@ -1,59 +1,76 @@
+cmake_minimum_required(VERSION 3.5)
 project(zvision_lidar_driver)
-cmake_minimum_required(VERSION 2.8.3)
 
-add_compile_options(-std=c++11)
-set(CMAKE_BUILD_TYPE Release)#RelWithDebInfo
-## Find catkin macros and libraries
-## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
-## is used, also find other catkin packages
-set(${PROJECT_NAME}_CATKIN_DEPS
-    angles
-    pcl_ros
-    roscpp
-    roslib
-    sensor_msgs
-    tf
-    dynamic_reconfigure
-    diagnostic_updater
-    zvision_lidar_msgs
-    nodelet
-)
+# Default to C++14
+if(NOT CMAKE_CXX_STANDARD)
+	set(CMAKE_CXX_STANDARD 14)
+endif()
 
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+	add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
+
+find_package(ament_cmake_ros REQUIRED)
+find_package(diagnostic_msgs REQUIRED)
+find_package(diagnostic_updater REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(rclcpp_components REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(zvision_lidar_msgs REQUIRED)
+find_package(PCL 1.10 REQUIRED)
+if(PCL_FOUND)
+	include_directories(${PCL_INCLUDE_DIRS})
+	add_definitions(${PCL_DEFINITIONS})
+	link_directories(${PCL_LIBRARY_DIRS})
+endif()
+# find_package(pcl_ros REQUIRED)
+# libpcap provides no pkg-config or find_package module:
 set(libpcap_LIBRARIES -lpcap)
 
+include_directories(include/zvision_lidar_driver)
+
+# compile the driver and input library
+add_subdirectory(src/lib)
+
+# build the driver node
+add_library(zvision_lidar_driver SHARED src/driver/zvision_driver.cpp)
+ament_target_dependencies(zvision_lidar_driver
+		diagnostic_msgs
+		diagnostic_updater
+		rclcpp
+		rclcpp_components
+		tf2_ros
+		zvision_lidar_msgs
+		)
+target_link_libraries(zvision_lidar_driver zvision_input)
+#
+add_executable(zvision_lidar_node src/driver/zvision_lidar_node.cpp)
+ament_target_dependencies(zvision_lidar_node
+		rclcpp
+		)
+target_link_libraries(zvision_lidar_node zvision_lidar_driver)
+
+# install runtime and library files
+install(TARGETS zvision_lidar_driver
+		ARCHIVE DESTINATION lib
+		LIBRARY DESTINATION lib
+		RUNTIME DESTINATION bin
+		)
+install(TARGETS zvision_lidar_node
+		DESTINATION lib/${PROJECT_NAME}
+		)
+
+rclcpp_components_register_nodes(zvision_lidar_driver
+		"zvision_lidar_driver::zvisionLidarDriver")
+
+install(DIRECTORY include/${PROJECT_NAME}/
+  DESTINATION include/${PROJECT_NAME})
+
+install(DIRECTORY config
+  DESTINATION share/${PROJECT_NAME})
 
 
-find_package(catkin REQUIRED COMPONENTS
-	${${PROJECT_NAME}_CATKIN_DEPS}
-  pcl_conversions
-  rospy
-	std_msgs
-  genmsg
-  cv_bridge
-  message_generation
-)
-
-find_package(Boost COMPONENTS signals)
-find_package(Boost REQUIRED COMPONENTS thread)
-find_package(PkgConfig REQUIRED)
-
-
-include_directories(${Boost_INCLUDE_DIR} ${catkin_INCLUDE_DIRS}
-	${dynamic_reconfigure_PACKAGE_PATH}/cmake/cfgbuild.cmake)
-
-generate_dynamic_reconfigure_options(cfg/zvisionLidarNode.cfg)
-
-catkin_package(
-    CATKIN_DEPENDS ${${PROJECT_NAME}_CATKIN_DEPS}
-    CATKIN_DEPENDS message_runtime std_msgs
-    )
-
-add_subdirectory(src)
-
-install(FILES nodelet_zvision_lidar.xml
-        DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-)
-
+ament_package()
 
 
 

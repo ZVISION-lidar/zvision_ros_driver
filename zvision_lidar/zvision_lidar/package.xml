@@ -1,23 +1,27 @@
-<package>
-
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format2.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="2">
   <name>zvision_lidar</name>
-  <version>1.0.0</version>
+  <version>2.1.0</version>
   <description>
-    Basic ROS support for the ZVISION 3D LIDARs.
+    Basic ROS support for the ZVISION MEMS 3D LIDARs.
   </description>
-  <maintainer email="pengfei.cui@zvision.xyz">Pengfei Cui</maintainer>
-  <author> Pengfei Cui </author>
-  <author> Tony Zhang </author>
+  <maintainer email="senke.chen@zvision.xyz">Senke CHEN</maintainer>
+  <author>Senke CHEN</author>
+  <author>Pengfei Cui</author>
   <license>BSD</license>
 
-  <buildtool_depend>catkin</buildtool_depend>
+  <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <run_depend>zvision_lidar_driver</run_depend>
-  <run_depend>zvision_lidar_msgs</run_depend>
-  <run_depend>zvision_lidar_pointcloud</run_depend>
+  <exec_depend>zvision_lidar_driver</exec_depend>
+  <exec_depend>zvision_lidar_msgs</exec_depend>
+  <exec_depend>zvision_lidar_pointcloud</exec_depend>
 
   <export>
-    <metapackage/>
+    <build_type>ament_cmake</build_type>
   </export>
-
 </package>
+
+
+
+

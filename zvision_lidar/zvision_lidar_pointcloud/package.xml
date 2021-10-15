@@ -1,9 +1,10 @@
-<package>
-
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
   <name>zvision_lidar_pointcloud</name>
-  <version>1.0.0</version>
+  <version>2.1.0</version>
   <description>
-    Point cloud conversions for zvision_lidar 3D LIDARs.
+    Point cloud conversions for ZVISION MEMS 3D LIDARs.
   </description>
   <maintainer email="pengfei.cui@zvision.xyz">Pengfei Cui</maintainer>
   <author>Pengfei</author>
@@ -13,42 +14,31 @@
   <author>Jesse Vera</author>
   <license>BSD</license>
 
-  <buildtool_depend>catkin</buildtool_depend>
+  <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <build_depend>angles</build_depend>
-  <build_depend>nodelet</build_depend>
-  <build_depend>pcl_conversions</build_depend>
-  <build_depend>pcl_ros</build_depend>
-  <build_depend>pluginlib</build_depend>
-  <build_depend>roscpp</build_depend>
-  <build_depend>roslib</build_depend>
-  <build_depend>sensor_msgs</build_depend>
-  <build_depend>tf</build_depend>
-  <build_depend>zvision_lidar_driver</build_depend>
-  <build_depend>zvision_lidar_msgs</build_depend>
-  <build_depend>dynamic_reconfigure</build_depend>
-  <run_depend>message_runtime</run_depend>
-  <run_depend>std_msgs</run_depend>
-  <!-- these build dependencies are only needed for unit testing -->
-  <build_depend>roslaunch</build_depend>
-  <build_depend>rostest</build_depend>
-  <build_depend>tf2_ros</build_depend>
+  <depend>angles</depend>
+  <depend>diagnostic_updater</depend>
+  <depend>geometry_msgs</depend>
+  <depend>libpcl-all-dev</depend>
+  <depend>message_filters</depend>
+  <depend>rclcpp</depend>
+  <depend>rclcpp_components</depend>
+  <depend>sensor_msgs</depend>
+  <depend>tf2</depend>
+  <depend>tf2_ros</depend>
+  <depend>zvision_lidar_msgs</depend>
+  <depend>zvision_lidar_driver</depend>
+  <depend>yaml-cpp</depend>
 
-  <run_depend>angles</run_depend>
-  <run_depend>nodelet</run_depend>
-  <run_depend>pcl_ros</run_depend>
-  <run_depend>pluginlib</run_depend>
-  <!-- <run_depend>python-yaml</run_depend> -->
-  <run_depend>roscpp</run_depend>
-  <run_depend>roslib</run_depend>
-  <run_depend>sensor_msgs</run_depend>
-  <run_depend>tf</run_depend>
-  <run_depend>zvision_lidar_driver</run_depend>
-  <run_depend>zvision_lidar_msgs</run_depend>
-  <!-- <run_depend>yaml-cpp</run_depend> -->
-  <run_depend>dynamic_reconfigure</run_depend>
+  <test_depend>ament_cmake_gtest</test_depend>
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
 
   <export>
-    <nodelet plugin="${prefix}/cloud_nodelets.xml"/>
+    <build_type>ament_cmake</build_type>
   </export>
 </package>
+
+
+
+

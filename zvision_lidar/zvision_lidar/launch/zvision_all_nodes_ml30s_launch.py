@@ -29,7 +29,7 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-"""Launch the zvision driver, pointcloud, and laserscan nodes with default configuration."""
+"""Launch the zvision driver and pointcloud nodes with default configuration."""
 
 import os
 import yaml
@@ -40,35 +40,35 @@ import launch_ros.actions
 
 
 def generate_launch_description():
+    # launch zvision driver node
     driver_share_dir = ament_index_python.packages.get_package_share_directory('zvision_lidar_driver')
     driver_params_file = os.path.join(driver_share_dir, 'config', 'ML30S-zvision_lidar_driver_node-params.yaml')
+    with open(driver_params_file, 'r') as f:
+        driver_params = yaml.safe_load(f)['zvision_lidar_node']['ros__parameters']
     zvision_lidar_driver_node = launch_ros.actions.Node(package='zvision_lidar_driver',
-                                                   node_executable='zvision_lidar_node',
+                                                   executable='zvision_lidar_node',
                                                    output='both',
-                                                #    prefix=['gnome-terminal -- gdb -ex run --args'],
-                                                   parameters=[driver_params_file])
-
+                                                   parameters=[driver_params])
+    # launch zvision convert node
     convert_share_dir = ament_index_python.packages.get_package_share_directory('zvision_lidar_pointcloud')
     convert_params_file = os.path.join(convert_share_dir, 'config', 'ML30S-zvision_lidar_convert_node-params.yaml')
     with open(convert_params_file, 'r') as f:
         convert_params = yaml.safe_load(f)['zvision_lidar_cloud_node']['ros__parameters']
-    convert_params['calibration'] = os.path.join(convert_share_dir, 'data', 'ML30S_A1_Default.cal')
     zvision_convert_node = launch_ros.actions.Node(package='zvision_lidar_pointcloud',
-                                                    node_executable='zvision_convert_node',
+                                                    executable='zvision_convert_node',
                                                     output='both',
                                                     parameters=[convert_params])
-
-    # laserscan_share_dir = ament_index_python.packages.get_package_share_directory('velodyne_laserscan')
-    # laserscan_params_file = os.path.join(laserscan_share_dir, 'config', 'default-velodyne_laserscan_node-params.yaml')
-    # velodyne_laserscan_node = launch_ros.actions.Node(package='velodyne_laserscan',
-    #                                                   node_executable='velodyne_laserscan_node',
-    #                                                   output='both',
-    #                                                   parameters=[laserscan_params_file])
+    # launch rviz2 node
+    rviz_config = ament_index_python.packages.get_package_share_directory('zvision_lidar_pointcloud')+'/rviz_cfg/zvision_lidar.rviz'
+    zvision_rviz_node = launch_ros.actions.Node(package='rviz2',
+                                                namespace='rviz2',
+                                                executable='rviz2',
+                                                arguments=['-d',rviz_config])
 
 
     return launch.LaunchDescription([zvision_lidar_driver_node,
                                      zvision_convert_node,
-                                    #  velodyne_laserscan_node,
+                                     zvision_rviz_node,
 
                                      launch.actions.RegisterEventHandler(
                                          event_handler=launch.event_handlers.OnProcessExit(

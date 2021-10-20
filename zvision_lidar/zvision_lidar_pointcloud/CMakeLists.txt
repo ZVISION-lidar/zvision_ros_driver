@@ -96,7 +96,7 @@ install(TARGETS zvision_convert_node
 
 install(DIRECTORY include/${PROJECT_NAME}/
   DESTINATION include/${PROJECT_NAME})
-install(DIRECTORY config launch
+install(DIRECTORY config launch data rviz_cfg
   DESTINATION share/${PROJECT_NAME})
 
 ament_package()

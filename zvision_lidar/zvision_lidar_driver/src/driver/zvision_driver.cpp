@@ -19,7 +19,7 @@
 namespace zvision_lidar_driver
 {
 zvisionLidarDriver::zvisionLidarDriver(const rclcpp::NodeOptions & options)
-        : rclcpp::Node("zvision_driver_node", options),
+        : rclcpp::Node("zvision_lidar_node", options),
           diagnostics_(this, 0.2)
 {
 
@@ -125,6 +125,7 @@ zvisionLidarDriver::zvisionLidarDriver(const rclcpp::NodeOptions & options)
 
       std::string dump_file;
       dump_file = this->declare_parameter("pcap", std::string(""));
+      // std::cout << "Xxxxxxxxxxxxxxxxxxx"<< dump_file << std::endl;
 //	  private_nh.param("pcap", dump_file, std::string(""));
 
       int port_to_recv_udppkt;
@@ -137,30 +138,28 @@ zvisionLidarDriver::zvisionLidarDriver(const rclcpp::NodeOptions & options)
 //	  f = boost::bind(&zvisionLidarDriver::callback, this, _1, _2);
 //	  srv_->setCallback(f);  // Set callback function und call initially
 
-	  // initialize diagnostics
-	  diagnostics_.setHardwareID(deviceName);
+      // initialize diagnostics
+	diagnostics_.setHardwareID(deviceName);
       const double diag_freq = packet_rate_ML30S_A1 / config_.npackets;
-	  diag_max_freq_ = diag_freq;
-	  diag_min_freq_ = diag_freq;
-
-	  using namespace diagnostic_updater;
-	  diag_topic_.reset(new TopicDiagnostic("zvision_lidar_packets", diagnostics_,
-	                                        FrequencyStatusParam(&diag_min_freq_, &diag_max_freq_, 0.1, 10),
-	                                        TimeStampStatusParam()));
-
-	  // open zvision lidar input device or file
-	  if (dump_file != "")  // have PCAP file?
-	  {
-		  // read data from packet capture file
-		  input_.reset(new zvision_lidar_driver::InputPCAP(this, port_to_recv_udppkt, packet_rate_ML30S_A1, dump_file));
-	  }
-	  else
-	  {
-		  // read data from live socket
-		  input_.reset(new zvision_lidar_driver::InputSocket(this, port_to_recv_udppkt));
-	  }
-	  // raw packet output topic
-//	  output_ = node.advertise<zvision_lidar_msgs::msg::ZvisionLidarScan>("zvision_lidar_packets", 20);
+	diag_max_freq_ = diag_freq;
+	diag_min_freq_ = diag_freq;
+	using namespace diagnostic_updater;
+	diag_topic_.reset(new TopicDiagnostic("zvision_lidar_packets", diagnostics_,
+	                                      FrequencyStatusParam(&diag_min_freq_, &diag_max_freq_, 0.1, 10),
+	                                      TimeStampStatusParam()));
+	// open zvision lidar input device or file
+	if (dump_file != "")  // have PCAP file?
+	{
+	  // read data from packet capture file
+	  input_.reset(new zvision_lidar_driver::InputPCAP(this, port_to_recv_udppkt, packet_rate_ML30S_A1, dump_file));
+	}
+	else
+	{
+	  // read data from live socket
+	  input_.reset(new zvision_lidar_driver::InputSocket(this, port_to_recv_udppkt));
+	}
+	// raw packet output topic
+//	 output_ = node.advertise<zvision_lidar_msgs::msg::ZvisionLidarScan>("zvision_lidar_packets", 20);
       output_ =
               this->create_publisher<zvision_lidar_msgs::msg::ZvisionLidarScan>("zvision_lidar_packets", 20);
   }

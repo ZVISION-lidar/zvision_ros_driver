@@ -1,10 +1,10 @@
-zvision_lidar_driver_node:
+zvision_lidar_node:
     ros__parameters:
-        device_ip: 192.168.10.108
+        device_ip: 192.168.1.200
         udp_port: 2368
         read_once: false
         read_fast: false
         frame_id: zvision_lidar
         model: ML30SA1
         frequency: 10
-        pcap: None
+        pcap: /home/z/ros2_ws/src/zvision_ros_driver/zvision_lidar/zvision_lidar_pointcloud/data/ML30S_A1_Default.pcap

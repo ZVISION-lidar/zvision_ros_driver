@@ -55,7 +55,7 @@ void RawData::loadConfigFile()
   this->use_lidar_time_ = this->declare_parameter("use_lidar_time",false);
   anglePath = this->declare_parameter("angle_path",std::string(""));
   model = this->declare_parameter("model",std::string("ML30SA1"));
-  this->dev_ip_ = this->declare_parameter("device_ip",std::string(""));
+//   this->dev_ip_ = this->declare_parameter("device_ip",std::string(""));
   
   if(model == std::string("ML30B1"))
       device_type_ = zvision::ML30B1;

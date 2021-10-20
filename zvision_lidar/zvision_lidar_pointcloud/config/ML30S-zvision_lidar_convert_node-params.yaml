@@ -1,13 +1,11 @@
 zvision_lidar_cloud_node:
     ros__parameters:
-        device_ip: 192.168.10.108
         angle_path: /home/z/ros2_ws/src/zvision_ros_driver/zvision_lidar/zvision_lidar_pointcloud/data/ML30S_A1_Default.cal
         model: ML30SA1
         downsample_type: None
         line_sample: 2
         voxel_leaf_size: 0.2f
         use_lidar_time: false
-        # calibration: L30S_A1_Default.cal
         x_tra: 0.0
         y_tra: 0.0
         z_tra: 0.0

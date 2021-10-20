@@ -1,75 +1,89 @@
-#### 1. Prerequisites
-(1) Install a ubuntu PC. We suggested Ubuntu 14.04, Ubuntu 16.04 and Ubuntu 18.04. Please do not use virtual machine.
-(2) Install ros full-desktop version. We tried Indigo, Kinect and Melodic.
-(3) Please also install libpcap-dev.
-
-####  2. Install
-(1). Copy the whole zvisionlidar ROS driver directory into ROS workspace, i.e "~/catkin_ws/src". Please make sure your dir mane has no special characters, '+', '(', ')' etc.
-
-(2). Check the file attributes:
-
-```
-cd ~/catkin_ws/src/zvisionlidar/zvision_lidar_driver
-chmod 777 cfg/*
-cd ~/catkin_ws/src/zvisionlidar/zvision_lidar_pointcloud
-chmod 777 cfg/*
+# zvision_ros_driver for ROS2-foxy  
+## 1. Prerequisites
+(1) Ubuntu 20.04  with ros2-foxy desktop-full version.   
+(2) libpcap-dev.  
+```bash
+sudo apt-get install -y  libpcap-dev
 ```
 
-(3). Then to compile the source code and to install it:
-
+##  2. Install
+(1). Copy the whole zvisionlidar ROS driver directory into ROS2 workspace, i.e "~/ros2_ws/src". Please make sure your dir mane has no special characters, '+', '(', ')' etc. 
+```bash
+cd ~/ros2_ws/src
+git clone -b ros2-foxy https://github.com/ZVISION-lidar/zvision_ros_driver
+``` 
+(2). Clone the diagnostics repo
+```bash
+ git clone https://github.com/ros/diagnostics.git 
+ ```
+(3). Compile with colcon:
+```bash
+colcon build --symlink-install 
 ```
-cd ~/catkin_ws
-catkin_make
-```
-#### 3. Configure PC IP
+## 3. Network configuration
 By default, the ZVISION_LIDAR is configured to **192.168.10.108** as its device IP and **255.255.255.255** as destination IP that it would communicate. The default **LiDAR UDP dst port is 2368**.
 So you need configure your PC IP as a static one **192.168.10.10**.
 
-#### 4. Run online lidar
-We have provide example launch files under zvision_lidar_pointcloud/launch, we can run the launch file to view the point cloud data. For example, if we want to view ML30/ML30SA1 real time data:
-(1). Open a new terminal and run:
+## 4. Get LiDAR data
+Take ML30S for example:
+### (1) Online 
+* Modify config files  
+    * >zvision_lidar_driver/config/ML30S-zvision_lidar_driver_node-params.yaml  
+    
+        * modify the *model* , *device_ip* , *udp_port* to ensure they are the same as your lidar configuration.  
+        * modify the frame_id if you need.
+        * keep *pcap: ""*  to get online data (enable online mode).
+        * *read_once* and *read_fast* are not used under online mode. 
 
-```
-cd ~/catkin_ws
-source devel/setup.bash
-roslaunch zvision_lidar_pointcloud ML30SA1.launch
-```
+    * >zvision_lidar_pointcloud/config/ML30S-zvision_lidar_convert_node-params.yaml
+        ```yaml
+        device_ip: 192.168.10.108 # modify to your device configuration
+        angle_path: "" # keep "" to get calibration data online
+        model: ML30SA1 # modify to your device model, keep ML30SA1 if you are using ML30S serise.
+        downsample_type: "" # voxel/line
+        line_sample: 2 
+        voxel_leaf_size: 0.2f # voxel grid filter parameter.
+        use_lidar_time: false # false for ros timestamp, true for timestamp from udp packages.
+        x_tra: 0.0 # for pointcloud transformation (not support yet).
+        y_tra: 0.0
+        z_tra: 0.0
+        x_rot: 0.0
+        y_rot: 0.0
+        z_rot: 0.0
+        ```
 
-#### 5. Run offline pcap file
-We can also run the driver to view the offline pcap file:
+* launch   
+    ```bash
+    cd ~/catkin_ws
+    colcon build --symlink-install #install launch and config files into share.
+    source install/setup.bash   
+    # or source install/setup.zsh if you are using zsh.
+    ros2 launch zvision_lidar zvision_all_nodes_ml30s_launch.py
+    ```
+### (2) Offline
 
-```
-cd ~/catkin_ws
-source devel/setup.bash
-roslaunch zvision_lidar_pointcloud ML30SA1_pcap.launch
-```
-Then we can run view the pointcloud via "rviz"
+You can also get point cloud data from captured pcap data. 
+The operation is almost the same as online mode.
+* Modify config files  
+    * modify the *model* , *device_ip* , *udp_port* to ensure they are the same as your lidar configuration.  
+    * modify the frame_id if you need.
+    * specify the path of pcap file in *ML30S-zvision_lidar_driver_node-params.yaml* and the angle_path in *ML30S-zvision_lidar_convert_node-params.yaml*.
+    * modify the value of *read_once* and *read_fast* based on your need.
+* launch   
+    ```bash
+    cd ~/catkin_ws
+    colcon build --symlink-install #install launch and config files into share.
+    source install/setup.bash   
+    # or source install/setup.zsh if you are using zsh.
+    ros2 launch zvision_lidar zvision_all_nodes_ml30s_launch.py
+    ```
 
-#### 6. About the lidar calibration parameters
+## 5. About the lidar calibration parameters
 Under "**zvision_lidar_pointcloud/data**" directory, you can find the lidar calibration parameters files for the exact sensor. By default the launch file load the files
 - zvision_lidar_pointcloud/data/ML30SA1_Default.cal
 
 
 If you have more than one ZVISIONLIDAR, you can put the data files into "**zvision_lidar_pointcloud/data**" directory.Then you need rewrite the launch file to start your lidar. We have put an example launch file "ML30SA1_two_sensor.launch" to load two lidars together for reference.
-
-#### 7. Apply translation and rotation to the pointcloud
-We could apply translation and rotation to the pointcloud before calculate the x-y-z. This operation is used after a zvision_lidar_node node is running.
-(1). Open a new terminal and run:
-
-```
-cd ~/catkin_ws
-rosrun rqt_reconfigure rqt_reconfigure 
-```
-(2). Select the pointcloud source node (for example:zvision_lidar_node), and change the x-trans,...,z-trans,...,z-rotation.
-
-
-**Notes**
-In the launch file, we could set the parameter (device_ip and udp_port) to receive the specific lidar data.
-In the launch file, we could set the parameter (angle_path) to get the correct angle file.
-In the launch file, we could set the parameter (x_tra/y_tra/z_tra) to coordination transformation(x = x_old + x_trans).
-In the launch file, we could set the parameter (x_rot/y_rot/z_rot) to coordination transformation(x = rotation (x_old)).
-In the launch file, we could set the parameter (timestamp_type) to fill PointCloud2 message timestamp field(0:local ros timestamp, 1:GPS timestamp field in udp packet).
-
 
 
 

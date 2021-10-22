@@ -1,7 +1,7 @@
 zvision_lidar_cloud_node:
     ros__parameters:
         angle_path: ""
-        model: ML30SA1
+        model: MLXS
         downsample_type: None
         line_sample: 2
         voxel_leaf_size: 0.2f

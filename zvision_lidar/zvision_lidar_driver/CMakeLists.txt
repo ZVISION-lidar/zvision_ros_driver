@@ -23,7 +23,6 @@ if(PCL_FOUND)
 	add_definitions(${PCL_DEFINITIONS})
 	link_directories(${PCL_LIBRARY_DIRS})
 endif()
-# find_package(pcl_ros REQUIRED)
 # libpcap provides no pkg-config or find_package module:
 set(libpcap_LIBRARIES -lpcap)
 

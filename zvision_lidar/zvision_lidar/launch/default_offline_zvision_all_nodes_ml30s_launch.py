@@ -29,7 +29,7 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-"""Launch the zvision driver and pointcloud nodes with default configuration."""
+"""Launch the offline zvision driver and pointcloud nodes with default configuration."""
 
 import os
 import yaml
@@ -40,20 +40,28 @@ import launch_ros.actions
 
 
 def generate_launch_description():
-    # launch zvision driver node
     driver_share_dir = ament_index_python.packages.get_package_share_directory('zvision_lidar_driver')
+    convert_share_dir = ament_index_python.packages.get_package_share_directory('zvision_lidar_pointcloud')
+    # launch zvision driver node
     driver_params_file = os.path.join(driver_share_dir, 'config', 'ML30S-zvision_lidar_driver_node-params.yaml')
     with open(driver_params_file, 'r') as f:
         driver_params = yaml.safe_load(f)['zvision_lidar_node']['ros__parameters']
+    # 1. specify the offline pcap file path, device ip and dst udp port
+    driver_params["pcap"] = convert_share_dir + "/data/ML30S_A1_Default.pcap"
+    driver_params["device_ip"] = "192.168.1.200"
+    driver_params["udp_port"] = 2368
     zvision_lidar_driver_node = launch_ros.actions.Node(package='zvision_lidar_driver',
                                                    executable='zvision_lidar_node',
                                                    output='both',
                                                    parameters=[driver_params])
+                                                   
     # launch zvision convert node
-    convert_share_dir = ament_index_python.packages.get_package_share_directory('zvision_lidar_pointcloud')
     convert_params_file = os.path.join(convert_share_dir, 'config', 'ML30S-zvision_lidar_convert_node-params.yaml')
     with open(convert_params_file, 'r') as f:
         convert_params = yaml.safe_load(f)['zvision_lidar_cloud_node']['ros__parameters']
+    # 2. specify the offline angle file path
+    convert_params["angle_path"] = convert_share_dir + "/data/ML30S_A1_Default.cal"
+    convert_params["use_lidar_time"] = False
     zvision_convert_node = launch_ros.actions.Node(package='zvision_lidar_pointcloud',
                                                     executable='zvision_convert_node',
                                                     output='both',

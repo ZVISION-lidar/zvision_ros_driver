@@ -11,10 +11,8 @@
  *
  *  ROS driver node for the ZVISION 3D LIDARs.
  */
-//#include <ros/ros.h>
 #include <rclcpp/rclcpp.hpp>
 #include "zvision_driver.h"
-//#include "std_msgs/String.h"
 #include "std_msgs/msg/string.hpp"
 
 using namespace zvision_lidar_driver;
@@ -27,19 +25,6 @@ static void my_handler(int sig)
 
 int main(int argc, char** argv)
 {
-//  ros::init(argc, argv, "zvision_driver");
-//  ros::NodeHandle node;
-//  ros::NodeHandle private_nh("~");
-//
-//  signal(SIGINT, my_handler);
-//
-//  // start the driver
-//  zvision_lidar_driver::zvisionLidarDriver dvr(node, private_nh);
-//  // loop until shut down or end of file
-//  while (ros::ok() && dvr.poll())
-//  {
-//    ros::spinOnce();
-//  }
     // Force flush of the stdout buffer.
     setvbuf(stdout, nullptr, _IONBF, BUFSIZ);
 

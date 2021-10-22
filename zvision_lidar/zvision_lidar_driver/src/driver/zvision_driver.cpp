@@ -25,18 +25,11 @@ zvisionLidarDriver::zvisionLidarDriver(const rclcpp::NodeOptions & options)
 
   // use private node handle to get parameters
     config_.frame_id = this->declare_parameter("frame_id", std::string("zvision_lidar"));
-//  private_nh.param("frame_id", config_.frame_id, std::string("zvision_lidar"));
     config_.model = this->declare_parameter("model", std::string("ML30SA1"));
-//    private_nh.param("model", config_.model, std::string("ML30SA1"));
-// TODO: tf
-//   std::string tf_prefix = tf::getPrefixParam(private_nh);
-//   RCLCPP_DEBUG_STREAM(this->get_logger(),"tf_prefix: " << tf_prefix);
-//   config_.frame_id = tf::resolve(tf_prefix, config_.frame_id);
 
 
   int fre = 10;
   fre = this->declare_parameter("frequency", 10);
-//  private_nh.param("frequency", fre, 10);
   double packet_rate_ML30 = 125 * fre;
   double packet_rate_ML30S_A1 = 160 * fre;
   double packet_rate_MLX = 400 * fre;
@@ -72,16 +65,13 @@ zvisionLidarDriver::zvisionLidarDriver(const rclcpp::NodeOptions & options)
   if(config_.model == "ML30B1"){
 	  int npackets = 125;
       config_.npackets = this->declare_parameter("npackets", npackets);
-//	  private_nh.param("npackets", config_.npackets, npackets);
 	  RCLCPP_INFO_STREAM(this->get_logger(),"publishing " << config_.npackets << " packets per scan");
 
 	  std::string dump_file;
       dump_file = this->declare_parameter("pcap", std::string(""));
-//	  private_nh.param("pcap", dump_file, std::string(""));
 
 	  int port_to_recv_udppkt;
       port_to_recv_udppkt = this->declare_parameter("udp_port", (int)UDP_DATA_PORT_NUMBER);
-//	  private_nh.param("udp_port", port_to_recv_udppkt, (int)UDP_DATA_PORT_NUMBER);
 
 	  // Initialize dynamic reconfigure
 //	  srv_ = boost::make_shared<dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig> >(private_nh);
@@ -112,7 +102,6 @@ zvisionLidarDriver::zvisionLidarDriver(const rclcpp::NodeOptions & options)
 		  input_.reset(new zvision_lidar_driver::InputSocket(this, port_to_recv_udppkt));
 	  }
 	  // raw packet output topic
-//	  output_ = node.advertise<zvision_lidar_msgs::msg::ZvisionLidarScan>("zvision_lidar_packets", 20);
       output_ =
               this->create_publisher<zvision_lidar_msgs::msg::ZvisionLidarScan>("zvision_lidar_packets", 20);
   }
@@ -120,17 +109,13 @@ zvisionLidarDriver::zvisionLidarDriver(const rclcpp::NodeOptions & options)
 
 	  int npackets = 160;
       config_.npackets = this->declare_parameter("npackets", npackets);
-//	  private_nh.param("npackets", config_.npackets, npackets);
       RCLCPP_INFO_STREAM(this->get_logger(),"publishing " << config_.npackets << " packets per scan");
 
       std::string dump_file;
       dump_file = this->declare_parameter("pcap", std::string(""));
-      // std::cout << "Xxxxxxxxxxxxxxxxxxx"<< dump_file << std::endl;
-//	  private_nh.param("pcap", dump_file, std::string(""));
 
       int port_to_recv_udppkt;
       port_to_recv_udppkt = this->declare_parameter("udp_port", (int)UDP_DATA_PORT_NUMBER);
-//	  private_nh.param("udp_port", port_to_recv_udppkt, (int)UDP_DATA_PORT_NUMBER);
 
 	  // Initialize dynamic reconfigure
 //	  srv_ = boost::make_shared<dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig> >(private_nh);
@@ -159,23 +144,19 @@ zvisionLidarDriver::zvisionLidarDriver(const rclcpp::NodeOptions & options)
 	  input_.reset(new zvision_lidar_driver::InputSocket(this, port_to_recv_udppkt));
 	}
 	// raw packet output topic
-//	 output_ = node.advertise<zvision_lidar_msgs::msg::ZvisionLidarScan>("zvision_lidar_packets", 20);
       output_ =
               this->create_publisher<zvision_lidar_msgs::msg::ZvisionLidarScan>("zvision_lidar_packets", 20);
   }
   else if(config_.model == "MLX"){
       int npackets = 400;
       config_.npackets = this->declare_parameter("npackets", npackets);
-//	  private_nh.param("npackets", config_.npackets, npackets);
       RCLCPP_INFO_STREAM(this->get_logger(),"publishing " << config_.npackets << " packets per scan");
 
       std::string dump_file;
       dump_file = this->declare_parameter("pcap", std::string(""));
-//	  private_nh.param("pcap", dump_file, std::string(""));
 
       int port_to_recv_udppkt;
       port_to_recv_udppkt = this->declare_parameter("udp_port", (int)UDP_DATA_PORT_NUMBER);
-//	  private_nh.param("udp_port", port_to_recv_udppkt, (int)UDP_DATA_PORT_NUMBER);
 
       // Initialize dynamic reconfigure
 //      srv_ = boost::make_shared<dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig> >(private_nh);
@@ -206,23 +187,19 @@ zvisionLidarDriver::zvisionLidarDriver(const rclcpp::NodeOptions & options)
           input_.reset(new zvision_lidar_driver::InputSocket(this, port_to_recv_udppkt));
       }
       // raw packet output topic
-//      output_ = node.advertise<zvision_lidar_msgs::msg::ZvisionLidarScan>("zvision_lidar_packets", 20);
       output_ =
               this->create_publisher<zvision_lidar_msgs::msg::ZvisionLidarScan>("zvision_lidar_packets", 20);
   }
   else if(config_.model == "MLXA1"){
       int npackets = 475;
       config_.npackets = this->declare_parameter("npackets", npackets);
-//	  private_nh.param("npackets", config_.npackets, npackets);
       RCLCPP_INFO_STREAM(this->get_logger(),"publishing " << config_.npackets << " packets per scan");
 
       std::string dump_file;
       dump_file = this->declare_parameter("pcap", std::string(""));
-//	  private_nh.param("pcap", dump_file, std::string(""));
 
       int port_to_recv_udppkt;
       port_to_recv_udppkt = this->declare_parameter("udp_port", (int)UDP_DATA_PORT_NUMBER);
-//	  private_nh.param("udp_port", port_to_recv_udppkt, (int)UDP_DATA_PORT_NUMBER);
 
       // Initialize dynamic reconfigure
 //      srv_ = boost::make_shared<dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig> >(private_nh);
@@ -253,23 +230,19 @@ zvisionLidarDriver::zvisionLidarDriver(const rclcpp::NodeOptions & options)
           input_.reset(new zvision_lidar_driver::InputSocket(this, port_to_recv_udppkt));
       }
       // raw packet output topic
-//      output_ = node.advertise<zvision_lidar_msgs::msg::ZvisionLidarScan>("zvision_lidar_packets", 20);
       output_ =
               this->create_publisher<zvision_lidar_msgs::msg::ZvisionLidarScan>("zvision_lidar_packets", 20);
   }
   else if(config_.model == "MLXS"){
       int npackets = 450;
       config_.npackets = this->declare_parameter("npackets", npackets);
-//	  private_nh.param("npackets", config_.npackets, npackets);
       RCLCPP_INFO_STREAM(this->get_logger(),"publishing " << config_.npackets << " packets per scan");
 
       std::string dump_file;
       dump_file = this->declare_parameter("pcap", std::string(""));
-//	  private_nh.param("pcap", dump_file, std::string(""));
 
       int port_to_recv_udppkt;
       port_to_recv_udppkt = this->declare_parameter("udp_port", (int)UDP_DATA_PORT_NUMBER);
-//	  private_nh.param("udp_port", port_to_recv_udppkt, (int)UDP_DATA_PORT_NUMBER);
 
       // Initialize dynamic reconfigure
 //      srv_ = boost::make_shared<dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig> >(private_nh);
@@ -300,7 +273,6 @@ zvisionLidarDriver::zvisionLidarDriver(const rclcpp::NodeOptions & options)
           input_.reset(new zvision_lidar_driver::InputSocket(this, port_to_recv_udppkt));
       }
       // raw packet output topic
-//      output_ = node.advertise<zvision_lidar_msgs::msg::ZvisionLidarScan>("zvision_lidar_packets", 20);
       output_ =
               this->create_publisher<zvision_lidar_msgs::msg::ZvisionLidarScan>("zvision_lidar_packets", 20);
   }
@@ -323,7 +295,6 @@ zvisionLidarDriver::~zvisionLidarDriver()
 bool zvisionLidarDriver::poll(void)
 {
   // Allocate a new shared pointer for zero-copy sharing with other nodelets.
-//  zvision_lidar_msgs::msg::ZvisionLidarScanPtr scan(new zvision_lidar_msgs::msg::ZvisionLidarScan);
     std::unique_ptr<zvision_lidar_msgs::msg::ZvisionLidarScan> scan =
             std::make_unique<zvision_lidar_msgs::msg::ZvisionLidarScan>();
   scan->packets.resize(config_.npackets);
@@ -370,14 +341,10 @@ bool zvisionLidarDriver::poll(void)
   scan->header.stamp = stamp;
   scan->header.frame_id = config_.frame_id;
   output_->publish(std::move(scan));
-
-//        output_.publish(scan);
  
   // notify diagnostics that a message has been published, updating its status
 
   diag_topic_->tick(stamp);
-//   diagnostics_.update();
-
   return true;
 }
 void zvisionLidarDriver::pollThread()

@@ -23,16 +23,12 @@
 #ifndef _RAWDATA_H
 #define _RAWDATA_H
 
-//#include <ros/ros.h>
-//#include <ros/package.h>
 #include <rclcpp/rclcpp.hpp>
 #include <zvision_lidar_msgs/msg/zvision_lidar_packet.hpp>
 #include <zvision_lidar_msgs/msg/zvision_lidar_scan.hpp>
 #include "std_msgs/msg/string.hpp"
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
-// #include <pcl_ros/impl/transforms.hpp>
-// #include <pcl_conversions/pcl_conversions.h>
 #include <stdio.h>
 #include <iostream>
 #include <memory>

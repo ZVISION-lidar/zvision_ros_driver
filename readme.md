@@ -14,10 +14,11 @@ git clone -b ros2-foxy https://github.com/ZVISION-lidar/zvision_ros_driver
 ``` 
 (2). Clone the diagnostics repo
 ```bash
- git clone https://github.com/ros/diagnostics.git 
+ git clone -b foxy https://github.com/ros/diagnostics.git 
  ```
 (3). Compile with colcon:
 ```bash
+cd ~/ros2_ws
 colcon build --symlink-install 
 ```
 ## 3. Network configuration

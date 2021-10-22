@@ -19,10 +19,7 @@
 #define _CONVERT_H_
 
 #include <sensor_msgs/msg/point_cloud2.hpp>
-//#include <dynamic_reconfigure/server.h>
 #include <pcl/filters/voxel_grid.h>
-
-// #include "zvision_lidar_pointcloud/CloudNodeConfig.h"
 #include "rawdata.h"
 #include "tools.h"
 
@@ -45,20 +42,12 @@ public:
   };
 
 private:
-  // void callback(zvision_lidar_pointcloud::CloudNodeConfig& config, uint32_t level);
 
   void processScan(const zvision_lidar_msgs::msg::ZvisionLidarScan::SharedPtr scanMsg);
-
-  /// Pointer to dynamic reconfigure service srv_
-  // boost::shared_ptr<dynamic_reconfigure::Server<zvision_lidar_pointcloud::CloudNodeConfig> > srv_;
-
   zvision::LidarType device_type_;
   boost::shared_ptr<zvision_lidar_rawdata::RawData> data_;
-
   rclcpp::Subscription<zvision_lidar_msgs::msg::ZvisionLidarScan>::SharedPtr zvision_lidar_scan_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr output_;
-//  ros::Subscriber zvision_lidar_scan_;
-//  ros::Publisher output_;
   pcl::VoxelGrid<pcl::PointXYZI> voxel_grid_filter_;
   bool filter_enable_;
   float leaf_size_;

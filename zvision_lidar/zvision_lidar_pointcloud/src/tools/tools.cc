@@ -39,12 +39,7 @@ namespace zvision {
 
     int LidarTools::GetOnlineCalibrationData(std::string ip, CalibrationData& cal)
     {
-        //std::string ec;
-        //const int ppf = 256000; // points per frame, 256000 reserved
         const int ppk = 128; // points per cal udp packet
-        //std::unique_ptr<float> angle_data(new float[ppf * 2]); // points( azimuh, elevation);
-        //int packet_buffer_size = 1040 * (ppf / ppk) + 4; // 128 points in one packet, buffer reserved for ppf points.
-        //std::unique_ptr<unsigned char> packet_data(new unsigned char[packet_buffer_size]);
         const int send_len = 4;
         char cal_cmd[send_len] = { (char)0xBA, (char)0x07, (char)0x00, (char)0x00 };
         std::string cmd(cal_cmd, send_len);

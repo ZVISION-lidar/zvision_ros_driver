@@ -44,11 +44,6 @@ endif()
 include_directories(include/zvision_lidar_pointcloud include/tools ${PCL_INCLUDE_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
-# add_library(zvision_lidar_tools SHARED
-#         src/tools/tools.cc src/tools/tcp_client.cc)      
-# ament_target_dependencies(zvision_lidar_tools
-#         rclcpp
-# )
 
 add_subdirectory(src/tools)
 add_subdirectory(src/lib)
@@ -78,8 +73,6 @@ install(TARGETS convert
         )
 rclcpp_components_register_nodes(convert
         "zvision_lidar_pointcloud::Convert")
-
-
 
 
 

@@ -44,7 +44,6 @@ static const size_t packet_size = sizeof(zvision_lidar_msgs::msg::ZvisionLidarPa
 
 Input::Input(rclcpp::Node * private_nh, uint16_t port) : private_nh_(private_nh), port_(port)
 {
-//  private_nh.param("device_ip", devip_str_, std::string(""));
     devip_str_ = private_nh->declare_parameter("device_ip",std::string(""));
     if (!devip_str_.empty())
         RCLCPP_INFO_STREAM(private_nh->get_logger(),"Only accepting packets from IP address: " << devip_str_);
@@ -204,9 +203,6 @@ InputPCAP::InputPCAP(rclcpp::Node * private_nh, uint16_t port, double packet_rat
   empty_ = true;
 
   // get parameters using private node handle
-//  private_nh.param("read_once", read_once_, false);
-//  private_nh.param("read_fast", read_fast_, false);
-//  private_nh.param("repeat_delay", repeat_delay_, 0.0);
   read_once_ = private_nh->declare_parameter("read_once",false);
   read_fast_ = private_nh->declare_parameter("read_fast",false);
   repeat_delay_ = private_nh->declare_parameter("repeat_delay",0.0);
@@ -217,7 +213,6 @@ InputPCAP::InputPCAP(rclcpp::Node * private_nh, uint16_t port, double packet_rat
   if (repeat_delay_ > 0.0)
     RCLCPP_INFO(private_nh->get_logger(),"Delay %.3f seconds before repeating input file.", repeat_delay_);
   // Open the PCAP dump file
-  // RCLCPP_INFO(private_nh->get_logger(),"Opening PCAP file \"%s\"", filename_.c_str());
   RCLCPP_INFO_STREAM(private_nh->get_logger(),"Opening PCAP file " << filename_);
   if ((pcap_ = pcap_open_offline(filename_.c_str(), errbuf_)) == NULL)
   {

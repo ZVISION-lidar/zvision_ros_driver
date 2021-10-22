@@ -30,14 +30,4 @@ int main(int argc, char** argv)
     rclcpp::shutdown();
 
     return 0;
-//  ros::init(argc, argv, "cloud_node");
-//  ros::NodeHandle node;
-//  ros::NodeHandle priv_nh("~");
-//
-//  // create conversion class, which subscribes to raw data
-//  zvision_lidar_pointcloud::Convert conv(node, priv_nh);
-//
-//  // handle callbacks until shut down
-//  ros::spin();
-//  return 0;
 }

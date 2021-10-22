@@ -48,14 +48,9 @@ void RawData::loadConfigFile()
   std::string anglePath;
   std::string model;
   double xt, yt, zt, xr, yr, zr;
-//   private_nh.param("use_lidar_time", this->use_lidar_time_, false);/*default is local timestamp*/
-//   private_nh.param("angle_path", anglePath, std::string(""));/*angle file *.cal*/
-//   private_nh.param("model", model, std::string("ML30SA1"));/*device type*/
-//   private_nh.param("device_ip", this->dev_ip_, std::string(""));/*device ip*/
   this->use_lidar_time_ = this->declare_parameter("use_lidar_time",false);
   anglePath = this->declare_parameter("angle_path",std::string(""));
   model = this->declare_parameter("model",std::string("ML30SA1"));
-//   this->dev_ip_ = this->declare_parameter("device_ip",std::string(""));
   
   if(model == std::string("ML30B1"))
       device_type_ = zvision::ML30B1;
@@ -69,14 +64,7 @@ void RawData::loadConfigFile()
       device_type_ = zvision::MLXS;
   else
       device_type_ = zvision::Unknown;
-// std::cout << " <<<<<<<<<<<<<<<model:" << model << std::endl;
-  //private_nh.param("model", model, std::string("ML30S-A1"));/*device type*/
-//   private_nh.param("x_tra", xt, 0.0);/*x trans*/
-//   private_nh.param("y_tra", yt, 0.0);/*y trans*/
-//   private_nh.param("z_tra", zt, 0.0);/*z trans*/
-//   private_nh.param("x_rot", xr, 0.0);/*x rotation*/
-//   private_nh.param("y_rot", yr, 0.0);/*y rotation*/
-//   private_nh.param("z_rot", zr, 0.0);/*z rotation*/
+
   xt = this->declare_parameter("x_tra",0.0);
   yt = this->declare_parameter("y_tra",0.0);
   zt = this->declare_parameter("z_tra",0.0);

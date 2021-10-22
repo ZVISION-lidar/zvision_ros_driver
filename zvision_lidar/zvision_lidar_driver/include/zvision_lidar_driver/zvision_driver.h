@@ -23,10 +23,7 @@
 #include <tf2_ros/transform_listener.h>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <diagnostic_updater/publisher.hpp>
-// #include <dynamic_reconfigure/server.h>
-// #include "zvision_lidar_driver/zvisionLidarNodeConfig.h"
 #include <pcl/point_types.h>
-// #include <pcl_ros/impl/transforms.hpp>
 #include <pcl_conversions/pcl_conversions.h>
 #include "input.h"
 
@@ -47,11 +44,6 @@ public:
   bool poll(void);
   void pollThread();
 private:
-  /// Callback for dynamic reconfigure
-  // void callback(zvision_lidar_driver::zvisionLidarNodeConfig& config, uint32_t level);
-
-  /// Pointer to dynamic reconfigure service srv_
-  // boost::shared_ptr<dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig> > srv_;
 
   // configuration parameters
   struct

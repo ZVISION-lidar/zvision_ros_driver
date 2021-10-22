@@ -29,24 +29,19 @@ data_(new zvision_lidar_rawdata::RawData(options))
   ,filter_enable_(false)
 {
 
-//  private_nh.param("model", model, std::string("ML30SA1"));
   model = this->declare_parameter("model",std::string("ML30SA1"));
   device_type_ = zvision::LidarTools::GetDeviceTypeFromTypeString(model);
-  //private_nh.param("filter_enable", filter_enable_, false);
 
   std::string downsample_string = "";
-//  private_nh.param("downsample_type", downsample_string, std::string(""));
   downsample_string = this->declare_parameter("downsample_type",std::string(""));
   if(downsample_string == "downsample_line")
   {
-//      private_nh.param("line_sample", line_sample_, 2);
       line_sample_ = this->declare_parameter("line_sample",2);
       this->downsample_type_ = DownsampleType::Line;
       RCLCPP_INFO(this->get_logger(),"Downsample type is [Line], 1 in %d.", line_sample_);
   }
   else if(downsample_string == "downsample_voxel")
   {
-//      private_nh.param("voxel_leaf_size", leaf_size_, 0.2f);
       leaf_size_ = this->declare_parameter("voxel_leaf_size",0.2f);
       voxel_grid_filter_.setLeafSize(leaf_size_, leaf_size_, leaf_size_);
       this->downsample_type_ = DownsampleType::Voxel;
@@ -58,7 +53,6 @@ data_(new zvision_lidar_rawdata::RawData(options))
       RCLCPP_INFO(this->get_logger(),"Downsample type is [None] publish raw pointcloud.");
   }
 
-//  output_ = node.advertise<sensor_msgs::PointCloud2>("zvision_lidar_points", 20);
   output_ =
           this->create_publisher<sensor_msgs::msg::PointCloud2>("zvision_lidar_points", 20);
   //srv_question
@@ -69,9 +63,6 @@ data_(new zvision_lidar_rawdata::RawData(options))
   // srv_->setCallback(f);
 
   data_->loadConfigFile();
-  // subscribe to zvisionlidarScan packets
-//  zvision_lidar_scan_ = node.subscribe("zvision_lidar_packets", 20, &Convert::processScan, (Convert*)this,
-//                                 ros::TransportHints().tcpNoDelay(true));
 
   zvision_lidar_scan_ =
           this->create_subscription<zvision_lidar_msgs::msg::ZvisionLidarScan>(
@@ -186,7 +177,6 @@ void Convert::processScan(const zvision_lidar_msgs::msg::ZvisionLidarScan::Share
       pcl::toROSMsg(*outPoints, *outMsg);
   }
 
-//  output_.publish(outMsg);
     output_->publish(*outMsg);
 
 

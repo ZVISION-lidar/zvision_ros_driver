@@ -40,14 +40,16 @@ import launch_ros.actions
 
 
 def generate_launch_description():
+    device_ip = "192.168.10.108"
+    port = 2368
     driver_share_dir = ament_index_python.packages.get_package_share_directory('zvision_lidar_driver')
     convert_share_dir = ament_index_python.packages.get_package_share_directory('zvision_lidar_pointcloud')
     # launch zvision driver node
     driver_params_file = os.path.join(driver_share_dir, 'config', 'ML30S-zvision_lidar_driver_node-params.yaml')
     with open(driver_params_file, 'r') as f:
         driver_params = yaml.safe_load(f)['zvision_lidar_node']['ros__parameters']
-    driver_params["device_ip"] = "192.168.10.108"
-    driver_params["udp_port"] = 2368
+    driver_params["device_ip"] = device_ip
+    driver_params["udp_port"] = port
     zvision_lidar_driver_node = launch_ros.actions.Node(package='zvision_lidar_driver',
                                                    executable='zvision_lidar_node',
                                                    output='both',
@@ -57,6 +59,7 @@ def generate_launch_description():
     convert_params_file = os.path.join(convert_share_dir, 'config', 'ML30S-zvision_lidar_convert_node-params.yaml')
     with open(convert_params_file, 'r') as f:
         convert_params = yaml.safe_load(f)['zvision_lidar_cloud_node']['ros__parameters']
+    convert_params["device_ip"] = device_ip
     zvision_convert_node = launch_ros.actions.Node(package='zvision_lidar_pointcloud',
                                                     executable='zvision_convert_node',
                                                     output='both',

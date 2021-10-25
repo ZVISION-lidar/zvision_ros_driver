@@ -48,6 +48,7 @@ void RawData::loadConfigFile()
   std::string anglePath;
   std::string model;
   double xt, yt, zt, xr, yr, zr;
+  this->dev_ip_ = this->declare_parameter("device_ip",std::string(""));
   this->use_lidar_time_ = this->declare_parameter("use_lidar_time",false);
   anglePath = this->declare_parameter("angle_path",std::string(""));
   model = this->declare_parameter("model",std::string("ML30SA1"));

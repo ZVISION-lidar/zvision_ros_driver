@@ -67,6 +67,8 @@ private:
   std::shared_future<void> future_;
   std::promise<void> exit_signal_;
 
+
+
   // The thread that deals with data
   std::thread poll_thread_;
 };

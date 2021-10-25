@@ -23,7 +23,7 @@ colcon build --symlink-install
 ```
 ## 3. Network configuration
 By default, the ZVISION_LIDAR is configured to **192.168.10.108** as its device IP and **255.255.255.255** as destination IP that it would communicate. The default **LiDAR UDP dst port is 2368**.
-So you need configure your PC IP as a static one **192.168.10.10**.
+So you need configure your PC IP as a static one like **192.168.10.10**.
 
 ## 4. Get LiDAR data
 Take ML30S for example:
@@ -45,7 +45,7 @@ Take ML30S for example:
         line_sample: 2 
         voxel_leaf_size: 0.2f # voxel grid filter parameter.
         use_lidar_time: false # false for ros timestamp, true for timestamp from udp packages.
-        x_tra: 0.0 # for pointcloud transformation (not support yet).
+        x_tra: 0.0 # for pointcloud transformation.
         y_tra: 0.0
         z_tra: 0.0
         x_rot: 0.0
@@ -78,13 +78,9 @@ The operation is almost the same as online mode.
     # or source install/setup.zsh if you are using zsh.
     ros2 launch zvision_lidar zvision_all_nodes_ml30s_launch.py
     ```
-
-## 5. About the lidar calibration parameters
-Under "**zvision_lidar_pointcloud/data**" directory, you can find the lidar calibration parameters files for the exact sensor. By default the launch file load the files
-- zvision_lidar_pointcloud/data/ML30SA1_Default.cal
-
-
-If you have more than one ZVISIONLIDAR, you can put the data files into "**zvision_lidar_pointcloud/data**" directory.Then you need rewrite the launch file to start your lidar. We have put an example launch file "ML30SA1_two_sensor.launch" to load two lidars together for reference.
+### (3) Modify params in launch file    
+    
+    You can modify some parameters in the launch file, Please refer to zvisio_lidar/default_offline_zvision_all_nodes_ml30s_launch.py
 
 
 

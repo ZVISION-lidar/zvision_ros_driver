@@ -15,7 +15,8 @@
  */
 #include "zvision_driver.h"
 #include <zvision_lidar_msgs/msg/zvision_lidar_scan.h>
-
+#include <rcl_interfaces/msg/floating_point_range.hpp>
+#include <rcl_interfaces/msg/parameter_descriptor.hpp>
 namespace zvision_lidar_driver
 {
 zvisionLidarDriver::zvisionLidarDriver(const rclcpp::NodeOptions & options)
@@ -62,6 +63,17 @@ zvisionLidarDriver::zvisionLidarDriver(const rclcpp::NodeOptions & options)
   std::string deviceName(std::string("Zvision ") + model_full_name);
 
 
+  rcl_interfaces::msg::ParameterDescriptor time_offset_desc;
+  time_offset_desc.name = "time_offset";
+  time_offset_desc.type = rcl_interfaces::msg::ParameterType::PARAMETER_DOUBLE;
+  time_offset_desc.description = "time_offset";
+  rcl_interfaces::msg::FloatingPointRange time_offset_range;
+  time_offset_range.from_value = 0.0;
+  time_offset_range.to_value = 2.0;
+  time_offset_desc.floating_point_range.push_back(time_offset_range);
+  config_.time_offset = this->declare_parameter("time_offset", 0.0, time_offset_desc);
+
+
   if(config_.model == "ML30B1"){
 	  int npackets = 125;
       config_.npackets = this->declare_parameter("npackets", npackets);
@@ -72,12 +84,6 @@ zvisionLidarDriver::zvisionLidarDriver(const rclcpp::NodeOptions & options)
 
 	  int port_to_recv_udppkt;
       port_to_recv_udppkt = this->declare_parameter("udp_port", (int)UDP_DATA_PORT_NUMBER);
-
-	  // Initialize dynamic reconfigure
-//	  srv_ = boost::make_shared<dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig> >(private_nh);
-//	  dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig>::CallbackType f;
-//	  f = boost::bind(&zvisionLidarDriver::callback, this, _1, _2);
-//	  srv_->setCallback(f);  // Set callback function und call initially
 
 	  // initialize diagnostics
 	  diagnostics_.setHardwareID(deviceName);
@@ -110,18 +116,11 @@ zvisionLidarDriver::zvisionLidarDriver(const rclcpp::NodeOptions & options)
 	  int npackets = 160;
       config_.npackets = this->declare_parameter("npackets", npackets);
       RCLCPP_INFO_STREAM(this->get_logger(),"publishing " << config_.npackets << " packets per scan");
-
       std::string dump_file;
       dump_file = this->declare_parameter("pcap", std::string(""));
 
       int port_to_recv_udppkt;
       port_to_recv_udppkt = this->declare_parameter("udp_port", (int)UDP_DATA_PORT_NUMBER);
-
-	  // Initialize dynamic reconfigure
-//	  srv_ = boost::make_shared<dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig> >(private_nh);
-//	  dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig>::CallbackType f;
-//	  f = boost::bind(&zvisionLidarDriver::callback, this, _1, _2);
-//	  srv_->setCallback(f);  // Set callback function und call initially
 
       // initialize diagnostics
 	diagnostics_.setHardwareID(deviceName);
@@ -157,12 +156,6 @@ zvisionLidarDriver::zvisionLidarDriver(const rclcpp::NodeOptions & options)
 
       int port_to_recv_udppkt;
       port_to_recv_udppkt = this->declare_parameter("udp_port", (int)UDP_DATA_PORT_NUMBER);
-
-      // Initialize dynamic reconfigure
-//      srv_ = boost::make_shared<dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig> >(private_nh);
-//      dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig>::CallbackType f;
-//      f = boost::bind(&zvisionLidarDriver::callback, this, _1, _2);
-//      srv_->setCallback(f);  // Set callback function und call initially
 
       // initialize diagnostics
       diagnostics_.setHardwareID(deviceName);
@@ -201,12 +194,6 @@ zvisionLidarDriver::zvisionLidarDriver(const rclcpp::NodeOptions & options)
       int port_to_recv_udppkt;
       port_to_recv_udppkt = this->declare_parameter("udp_port", (int)UDP_DATA_PORT_NUMBER);
 
-      // Initialize dynamic reconfigure
-//      srv_ = boost::make_shared<dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig> >(private_nh);
-//      dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig>::CallbackType f;
-//      f = boost::bind(&zvisionLidarDriver::callback, this, _1, _2);
-//      srv_->setCallback(f);  // Set callback function und call initially
-
       // initialize diagnostics
       diagnostics_.setHardwareID(deviceName);
       const double diag_freq = packet_rate_MLXA1 / config_.npackets;
@@ -243,12 +230,6 @@ zvisionLidarDriver::zvisionLidarDriver(const rclcpp::NodeOptions & options)
 
       int port_to_recv_udppkt;
       port_to_recv_udppkt = this->declare_parameter("udp_port", (int)UDP_DATA_PORT_NUMBER);
-
-      // Initialize dynamic reconfigure
-//      srv_ = boost::make_shared<dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig> >(private_nh);
-//      dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig>::CallbackType f;
-//      f = boost::bind(&zvisionLidarDriver::callback, this, _1, _2);
-//      srv_->setCallback(f);  // Set callback function und call initially
 
       // initialize diagnostics
       diagnostics_.setHardwareID(deviceName);
@@ -293,7 +274,7 @@ zvisionLidarDriver::~zvisionLidarDriver()
  *  @returns true unless end of file reached
  */
 bool zvisionLidarDriver::poll(void)
-{
+{ 
   // Allocate a new shared pointer for zero-copy sharing with other nodelets.
     std::unique_ptr<zvision_lidar_msgs::msg::ZvisionLidarScan> scan =
             std::make_unique<zvision_lidar_msgs::msg::ZvisionLidarScan>();
@@ -356,10 +337,6 @@ void zvisionLidarDriver::pollThread()
     status = future_.wait_for(std::chrono::seconds(0));
   } while (status == std::future_status::timeout);
 }
-// void zvisionLidarDriver::callback(zvision_lidar_driver::zvisionLidarNodeConfig& config, uint32_t level)
-// {
-//   RCLCPP_INFO(this->get_logger(),"Reconfigure Request");
-//   config_.time_offset = config.time_offset;
-// }
+
 }
 RCLCPP_COMPONENTS_REGISTER_NODE(zvision_lidar_driver::zvisionLidarDriver)

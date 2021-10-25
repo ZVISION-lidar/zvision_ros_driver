@@ -8,3 +8,4 @@ zvision_lidar_node:
         model: ML30SA1
         frequency: 10
         pcap: ""
+        time_offset: 0.0

@@ -53,6 +53,7 @@ Convert::Convert(ros::NodeHandle node, ros::NodeHandle private_nh) : data_(new z
   }
 
   output_ = node.advertise<sensor_msgs::PointCloud2>("zvision_lidar_points", 20);
+  output_colored_ = node.advertise<sensor_msgs::PointCloud2>("zvision_lidar_points_colored", 20);
 
   //srv_question
   srv_ = boost::make_shared<dynamic_reconfigure::Server<zvision_lidar_pointcloud::CloudNodeConfig> >(private_nh);
@@ -80,6 +81,10 @@ void Convert::callback(zvision_lidar_pointcloud::CloudNodeConfig& config, uint32
   data_->z_rotation = config.z_rotation / 180.0 * M_PI;
   // config_.time_offset = config.time_offset;
 }
+
+
+
+
 
 /** @brief Callback for raw scan messages. *///IMPORTANT
 void Convert::processScan(const zvision_lidar_msgs::zvisionLidarScan::ConstPtr& scanMsg)
@@ -142,6 +147,7 @@ void Convert::processScan(const zvision_lidar_msgs::zvisionLidarScan::ConstPtr& 
   }
 
   sensor_msgs::PointCloud2 outMsg;
+  sensor_msgs::PointCloud2 outMsgColored;
   pcl::PointCloud<pcl::PointXYZI>::Ptr sampled_cloud(new pcl::PointCloud<pcl::PointXYZI>());
   sampled_cloud->header.stamp = pcl_conversions::toPCL(scanMsg->header).stamp;
   sampled_cloud->header.frame_id = scanMsg->header.frame_id;
@@ -150,6 +156,19 @@ void Convert::processScan(const zvision_lidar_msgs::zvisionLidarScan::ConstPtr& 
       voxel_grid_filter_.setInputCloud(outPoints);
       voxel_grid_filter_.filter(*sampled_cloud);
       pcl::toROSMsg(*sampled_cloud, outMsg);
+      pcl::PointCloud<pcl::PointXYZRGBA>::Ptr sampled_cloud_colored(new pcl::PointCloud<pcl::PointXYZRGBA>);
+      sampled_cloud_colored->resize(sampled_cloud->size());
+      sampled_cloud_colored->header.stamp = sampled_cloud->header.stamp;
+      sampled_cloud_colored->header.frame_id = sampled_cloud->header.frame_id;
+      for(int i = 0; i < sampled_cloud_colored->size();++i){
+        sampled_cloud_colored->at(i).x = sampled_cloud->at(i).x; 
+        sampled_cloud_colored->at(i).y = sampled_cloud->at(i).y; 
+        sampled_cloud_colored->at(i).z = sampled_cloud->at(i).z; 
+        sampled_cloud_colored->at(i).r = color_table[(int)outPoints->at(i).intensity *3 + 0]; 
+        sampled_cloud_colored->at(i).g = color_table[(int)outPoints->at(i).intensity *3 + 1]; 
+        sampled_cloud_colored->at(i).b = color_table[(int)outPoints->at(i).intensity *3 + 2];  
+      }
+      pcl::toROSMsg(*sampled_cloud_colored,outMsgColored);
   }
   else if(DownsampleType::Line == downsample_type_)
   {
@@ -167,13 +186,47 @@ void Convert::processScan(const zvision_lidar_msgs::zvisionLidarScan::ConstPtr& 
       sampled_cloud->is_dense = false;
       sampled_cloud->resize(valid);
       pcl::toROSMsg(*sampled_cloud, outMsg);
+
+      pcl::PointCloud<pcl::PointXYZRGBA>::Ptr sampled_cloud_colored(new pcl::PointCloud<pcl::PointXYZRGBA>);
+      sampled_cloud_colored->resize(sampled_cloud->size());
+      sampled_cloud_colored->header.stamp = sampled_cloud->header.stamp;
+      sampled_cloud_colored->header.frame_id = sampled_cloud->header.frame_id;
+      for(int i = 0; i < sampled_cloud_colored->size();++i){
+        sampled_cloud_colored->at(i).x = sampled_cloud->at(i).x; 
+        sampled_cloud_colored->at(i).y = sampled_cloud->at(i).y; 
+        sampled_cloud_colored->at(i).z = sampled_cloud->at(i).z; 
+        sampled_cloud_colored->at(i).r = color_table[(int)outPoints->at(i).intensity *3 + 0]; 
+        sampled_cloud_colored->at(i).g = color_table[(int)outPoints->at(i).intensity *3 + 1]; 
+        sampled_cloud_colored->at(i).b = color_table[(int)outPoints->at(i).intensity *3 + 2];  
+      }
+      pcl::toROSMsg(*sampled_cloud_colored,outMsgColored);
   }
   else
   {
       pcl::toROSMsg(*outPoints, outMsg);
+
+      pcl::PointCloud<pcl::PointXYZRGBA>::Ptr sampled_cloud_colored(new pcl::PointCloud<pcl::PointXYZRGBA>);
+      sampled_cloud_colored->resize(outPoints->size());
+      sampled_cloud_colored->header.stamp = outPoints->header.stamp;
+      sampled_cloud_colored->header.frame_id = outPoints->header.frame_id;
+      for(int i = 0; i < sampled_cloud_colored->size();++i){
+        sampled_cloud_colored->at(i).x = outPoints->at(i).x; 
+        sampled_cloud_colored->at(i).y = outPoints->at(i).y; 
+        sampled_cloud_colored->at(i).z = outPoints->at(i).z; 
+        sampled_cloud_colored->at(i).r = color_table[(int)outPoints->at(i).intensity *3 + 0]; 
+        sampled_cloud_colored->at(i).g = color_table[(int)outPoints->at(i).intensity *3 + 1]; 
+        sampled_cloud_colored->at(i).b = color_table[(int)outPoints->at(i).intensity *3 + 2];  
+      }
+      pcl::toROSMsg(*sampled_cloud_colored,outMsgColored);
   }
 
   output_.publish(outMsg);
+  output_colored_.publish(outMsgColored);
+  
+
+
+
+   
 
 }
 

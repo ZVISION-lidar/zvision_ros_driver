@@ -164,6 +164,15 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
 
 
 			  disTemp = (((Dis_High << 8) + Dis_Low) << 3) + (int)((Int_High & 0xE0) >> 5);
+              if(disTemp == 0x0){
+                pcl::PointXYZI p_invalid;
+                p_invalid.x = std::numeric_limits<float>::quiet_NaN();
+                p_invalid.y = std::numeric_limits<float>::quiet_NaN();
+                p_invalid.z = std::numeric_limits<float>::quiet_NaN();
+                p_invalid.intensity = 0;
+                pointcloud->at(point_num) = p_invalid;
+                continue;  
+              }
 			  double distantce_real_live = disTemp * 0.0015;/*distance from udp*/
 			  intensity = (((Int_High & 0x1F) << 8) + (Int_Low));/*reflectivity from udp*/
               intensity = intensity & 0x3FF;
@@ -235,6 +244,15 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
 			  unsigned char Int_Low  = (u_char)(pc[7 + 4 * laser_id]);
 
 			  disTemp = (((Dis_High << 8) + Dis_Low) << 3) + (int)((Int_High & 0xE0) >> 5);
+              if(disTemp == 0x0){
+                pcl::PointXYZI p_invalid;
+                p_invalid.x = std::numeric_limits<float>::quiet_NaN();
+                p_invalid.y = std::numeric_limits<float>::quiet_NaN();
+                p_invalid.z = std::numeric_limits<float>::quiet_NaN();
+                p_invalid.intensity = 0;
+                pointcloud->at(point_num) = p_invalid;
+                continue;  
+              }
 			  double distantce_real_live = disTemp * 0.0015;/*distance from udp*/
 			  intensity = (((Int_High & 0x1F) << 8) + (Int_Low));/*reflectivity from udp*/
 			  intensity = intensity & 0x3FF;
@@ -304,7 +322,16 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
               unsigned char Int_High = (u_char)(pc[6 + 4 * laser_id]);
               unsigned char Int_Low  = (u_char)(pc[7 + 4 * laser_id]);
 
-              disTemp = (((Dis_High << 8) + Dis_Low) << 3) + (int)((Int_High & 0xE0) >> 5);
+			  disTemp = (((Dis_High << 8) + Dis_Low) << 3) + (int)((Int_High & 0xE0) >> 5);
+              if(disTemp == 0x0){
+                pcl::PointXYZI p_invalid;
+                p_invalid.x = std::numeric_limits<float>::quiet_NaN();
+                p_invalid.y = std::numeric_limits<float>::quiet_NaN();
+                p_invalid.z = std::numeric_limits<float>::quiet_NaN();
+                p_invalid.intensity = 0;
+                pointcloud->at(point_num) = p_invalid;
+                continue;  
+              }
               double distantce_real_live = disTemp * 0.0015;/*distance from udp*/
               intensity = (((Int_High & 0x1F) << 8) + (Int_Low));/*reflectivity from udp*/
               intensity = intensity & 0x3FF;
@@ -374,7 +401,16 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
               unsigned char Int_High = (u_char)(pc[6 + 4 * laser_id]);
               unsigned char Int_Low  = (u_char)(pc[7 + 4 * laser_id]);
 
-              disTemp = (((Dis_High << 8) + Dis_Low) << 3) + (int)((Int_High & 0xE0) >> 5);
+			  disTemp = (((Dis_High << 8) + Dis_Low) << 3) + (int)((Int_High & 0xE0) >> 5);
+              if(disTemp == 0x0){
+                pcl::PointXYZI p_invalid;
+                p_invalid.x = std::numeric_limits<float>::quiet_NaN();
+                p_invalid.y = std::numeric_limits<float>::quiet_NaN();
+                p_invalid.z = std::numeric_limits<float>::quiet_NaN();
+                p_invalid.intensity = 0;
+                pointcloud->at(point_num) = p_invalid;
+                continue;  
+              }
               double distantce_real_live = disTemp * 0.0015;/*distance from udp*/
               intensity = (((Int_High & 0x1F) << 8) + (Int_Low));/*reflectivity from udp*/
               intensity = intensity & 0x3FF;
@@ -444,7 +480,16 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
               unsigned char Int_High = (u_char)(pc[6 + 4 * laser_id]);
               unsigned char Int_Low  = (u_char)(pc[7 + 4 * laser_id]);
 
-              disTemp = (((Dis_High << 8) + Dis_Low) << 3) + (int)((Int_High & 0xE0) >> 5);
+			  disTemp = (((Dis_High << 8) + Dis_Low) << 3) + (int)((Int_High & 0xE0) >> 5);
+              if(disTemp == 0x0){
+                pcl::PointXYZI p_invalid;
+                p_invalid.x = std::numeric_limits<float>::quiet_NaN();
+                p_invalid.y = std::numeric_limits<float>::quiet_NaN();
+                p_invalid.z = std::numeric_limits<float>::quiet_NaN();
+                p_invalid.intensity = 0;
+                pointcloud->at(point_num) = p_invalid;
+                continue;  
+              }
               double distantce_real_live = disTemp * 0.0015;/*distance from udp*/
               intensity = (((Int_High & 0x1F) << 8) + (Int_Low));/*reflectivity from udp*/
               intensity = intensity & 0x3FF;

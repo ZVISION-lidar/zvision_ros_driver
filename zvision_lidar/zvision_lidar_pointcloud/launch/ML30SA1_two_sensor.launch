@@ -4,7 +4,7 @@
   <arg name="model" default="ML30SA1" />
   <arg name="device_ip" default="192.168.10.108" />
   <arg name="udp_port" default="2368" />
-  <arg name="angle_path" default="$(find zvision_lidar_pointcloud)/data/ML30S_A1_Default.cal" />
+  <arg name="angle_path" default="" />
   <arg name="pcap" default="" />
 
   <!-- start nodelet manager -->
@@ -38,9 +38,9 @@
 <group ns="ns2">
   <arg name="manager" default="zvision_lidar_nodelet_manager" />
   <arg name="device_ip" default="192.168.10.109" />
-  <arg name="model" default="ML30S-A1" />
+  <arg name="model" default="ML30SA1" />
   <arg name="udp_port" default="2369" />
-  <arg name="angle_path" default="$(find zvision_lidar_pointcloud)/data/ML30S_A1_Default.cal" />
+  <arg name="angle_path" default="" />
   <arg name="pcap" default="" />
 
   <!-- start nodelet manager -->
@@ -65,7 +65,7 @@
     <param name="z_tra" value="0.0" />
     <param name="x_rot" value="0.0" />
     <param name="y_rot" value="0.0" />
-    <param name="z_rot" value="120.0" />
+    <param name="z_rot" value="0.0" />
     <param name="use_lidar_time" value="false" />
   </node>
 </group>

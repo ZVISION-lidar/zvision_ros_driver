@@ -62,6 +62,10 @@ def generate_launch_description():
     # 2. specify the offline angle file path
     convert_params["angle_path"] = convert_share_dir + "/data/ML30S_A1_Default.cal"
     convert_params["use_lidar_time"] = False
+    # 3. set outlier revomal parameters
+    convert_params["use_outlier_removal"] = True
+    convert_params["outlier_th"] = 0.25
+
     zvision_convert_node = launch_ros.actions.Node(package='zvision_lidar_pointcloud',
                                                     executable='zvision_convert_node',
                                                     output='both',

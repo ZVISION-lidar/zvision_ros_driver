@@ -44,15 +44,20 @@ public:
 private:
 
   void processScan(const zvision_lidar_msgs::msg::ZvisionLidarScan::SharedPtr scanMsg);
+  int* get_nearest_point_index();
+  double calDistance(pcl::PointXYZI a, pcl::PointXYZI b);
   zvision::LidarType device_type_;
   boost::shared_ptr<zvision_lidar_rawdata::RawData> data_;
   rclcpp::Subscription<zvision_lidar_msgs::msg::ZvisionLidarScan>::SharedPtr zvision_lidar_scan_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr output_;
   pcl::VoxelGrid<pcl::PointXYZI> voxel_grid_filter_;
   bool filter_enable_;
+  bool use_outlier_removal;
+  double outlier_th;
   float leaf_size_;
   int line_sample_;
   DownsampleType downsample_type_;
+  int* table_;
 };
 
 }  // namespace zvision_lidar_pointcloud

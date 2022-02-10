@@ -1,4 +1,4 @@
-# zvision_ros_driver for ROS2-foxy  
+# zvision_ros_driver for ROS2-foxy with outlier removal
 ## 1. Prerequisites
 (1) Ubuntu 20.04  with ros2-foxy desktop-full version.   
 (2) libpcap-dev.  
@@ -59,7 +59,7 @@ Take ML30S for example:
     colcon build --symlink-install #install launch and config files into share.
     source install/setup.bash   
     # or source install/setup.zsh if you are using zsh.
-    ros2 launch zvision_lidar zvision_all_nodes_ml30s_launch.py
+    ros2 launch zvision_lidar default_online_zvision_all_nodes_ml30s_launch.py 
     ```
 ### (2) Offline
 
@@ -76,11 +76,17 @@ The operation is almost the same as online mode.
     colcon build --symlink-install #install launch and config files into share.
     source install/setup.bash   
     # or source install/setup.zsh if you are using zsh.
-    ros2 launch zvision_lidar zvision_all_nodes_ml30s_launch.py
+    ros2 launch zvision_lidar default_offline_zvision_all_nodes_ml30s_launch.py 
     ```
-### (3) Modify params in launch file    
-    
-    You can modify some parameters in the launch file, Please refer to zvisio_lidar/default_offline_zvision_all_nodes_ml30s_launch.py
+
+### (3) Use outlier removal
+Modify convert_params to:
+
+```python
+convert_params["use_outlier_removal"] = True
+convert_params["outlier_th"] = 0.25
+# outlier_th: threshold of outliers(the square of the Euclidean distance)
+```
 
 
 

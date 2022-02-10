@@ -60,6 +60,9 @@ def generate_launch_description():
     with open(convert_params_file, 'r') as f:
         convert_params = yaml.safe_load(f)['zvision_lidar_cloud_node']['ros__parameters']
     convert_params["device_ip"] = device_ip
+    convert_params["use_outlier_removal"] = True
+    convert_params["outlier_th"] = 0.25
+
     zvision_convert_node = launch_ros.actions.Node(package='zvision_lidar_pointcloud',
                                                     executable='zvision_convert_node',
                                                     output='both',

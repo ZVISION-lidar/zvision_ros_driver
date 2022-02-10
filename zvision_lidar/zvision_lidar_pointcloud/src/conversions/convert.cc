@@ -150,7 +150,7 @@ data_(new zvision_lidar_rawdata::RawData(options))
   // srv_->setCallback(f);
 
   data_->loadConfigFile();
-  table_ = get_nearest_point_index();
+  if(data_->cal_init_ok_) table_ = get_nearest_point_index();
   zvision_lidar_scan_ =
           this->create_subscription<zvision_lidar_msgs::msg::ZvisionLidarScan>(
                   "zvision_lidar_packets", rclcpp::QoS(20),
@@ -233,8 +233,10 @@ void Convert::processScan(const zvision_lidar_msgs::msg::ZvisionLidarScan::Share
   pcl::PointCloud<pcl::PointXYZI>::Ptr  outputPtr(new pcl::PointCloud<pcl::PointXYZI>);
   outputPtr->resize(outPoints->size());
   outputPtr->header = outPoints->header;
-
-  if(use_outlier_removal){
+  if(table_ == nullptr && data_->cal_init_ok_){
+    table_ = get_nearest_point_index();
+  }
+  if(use_outlier_removal && table_ != nullptr){
     pcl::PointXYZI point_nan;
     point_nan.x = std::numeric_limits<float>::quiet_NaN();
     point_nan.y = std::numeric_limits<float>::quiet_NaN();

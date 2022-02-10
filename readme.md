@@ -10,7 +10,7 @@ sudo apt-get install -y  libpcap-dev
 (1). Copy the whole zvisionlidar ROS driver directory into ROS2 workspace, i.e "~/ros2_ws/src". Please make sure your dir mane has no special characters, '+', '(', ')' etc. 
 ```bash
 cd ~/ros2_ws/src
-git clone -b ros2-foxy https://github.com/ZVISION-lidar/zvision_ros_driver
+git clone -b  ros2-foxy-outlier-removal https://github.com/ZVISION-lidar/zvision_ros_driver
 ``` 
 (2). Clone the diagnostics repo
 ```bash

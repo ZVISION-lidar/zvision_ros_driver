@@ -17,10 +17,93 @@
 #include "convert.h"
 #include "tools/tools.h"
 #include <pcl_conversions/pcl_conversions.h>
-
+#include <pcl/filters/statistical_outlier_removal.h>
 namespace zvision_lidar_pointcloud
 {
 std::string model;
+
+
+double Convert::calDistance(pcl::PointXYZI a, pcl::PointXYZI b){
+    if(a.x == std::numeric_limits<float>::quiet_NaN() || b.x == std::numeric_limits<float>::quiet_NaN()) return std::numeric_limits<double>::infinity();
+    return pow((a.x-b.x),2) + pow((a.y-b.y),2) + pow((a.z-b.z),2);
+}
+//根据角度文件生成固定距离distance 的整帧点云数据。通过KD树获取near_cnt个最近邻点的索引。
+int* Convert::get_nearest_point_index()
+{
+    const int near_cnt = 8;
+    static int g_neighborhood_index_ml30s[51200 * (near_cnt)];
+    static int g_neighborhood_index_mlxs[108000 * (near_cnt)];
+
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
+    for (auto& point_cal : data_->cal_lut_->data)
+    {
+        pcl::_PointXYZ point_data;
+        float distance = 2.0;
+        point_data.x = distance * point_cal.cos_ele * point_cal.sin_azi;/*x*/
+        point_data.y = distance * point_cal.cos_ele * point_cal.cos_azi;/*y*/
+        point_data.z = distance * point_cal.sin_ele;/*z*/
+        cloud->push_back(point_data);
+    }
+    pcl::search::Search<pcl::PointXYZ>::Ptr tree_;
+    tree_.reset(new pcl::search::KdTree<pcl::PointXYZ>(false));
+#if 1
+
+    tree_->setInputCloud(cloud);
+
+    std::vector<int> nn_indices(near_cnt);
+    std::vector<float> nn_dists(near_cnt);
+
+    int cnt = 0;
+    if(cloud->points.size()==51200){
+        for (auto& pp : cloud->points)
+        {
+            if (tree_->nearestKSearch(pp, near_cnt, nn_indices, nn_dists) != near_cnt)
+            {
+                // distances[cp] = 0;
+                // PCL_WARN("[pcl::%s::applyFilter] Searching for the closest %d neighbors failed.\n", getClassName().c_str(), mean_k_);
+                // continue;
+            }
+            else
+            {
+                for (int i = 0; i < near_cnt; i++)
+                {
+                    g_neighborhood_index_ml30s[cnt * near_cnt + i] = nn_indices[i];
+                    // nearstIndexTabel.push_back(nn_indices[i]);
+                }
+            }
+            cnt++;
+        }
+        ROS_INFO("get_nearest_point_index  30s finished.\n");
+        return g_neighborhood_index_ml30s;    
+    }
+    else if(cloud->points.size()==108000){
+        for (auto& pp : cloud->points)
+        {
+            if (tree_->nearestKSearch(pp, near_cnt, nn_indices, nn_dists) != near_cnt)
+            {
+                //distances[cp] = 0;
+                //PCL_WARN("[pcl::%s::applyFilter] Searching for the closest %d neighbors failed.\n", getClassName().c_str(), mean_k_);
+                //continue;
+            }
+            else
+            {
+                for (int i = 0; i < near_cnt; i++)
+                {
+                    g_neighborhood_index_mlxs[cnt *  + i] = nn_indices[i];
+                    // nearstIndexTabel.push_back(nn_indices[i]);
+                }
+            }
+            cnt++;
+        }
+        ROS_INFO("get_nearest_point_index xs finished.\n");
+
+        return g_neighborhood_index_mlxs;    
+    }
+    
+#endif
+    ROS_INFO("get_nearest_point_index failed.\n");
+    return nullptr;
+}
 
 /** @brief Constructor. */
 Convert::Convert(ros::NodeHandle node, ros::NodeHandle private_nh) : data_(new zvision_lidar_rawdata::RawData())
@@ -51,7 +134,10 @@ Convert::Convert(ros::NodeHandle node, ros::NodeHandle private_nh) : data_(new z
       this->downsample_type_ = DownsampleType::None;
       ROS_INFO("Downsample type is [None] publish raw pointcloud.");
   }
-
+  private_nh.param("use_outlier_removal", use_outlier_removal, false);
+  ROS_INFO("use_outlier_removal: %c", use_outlier_removal?'y':'n');
+  private_nh.param("outlier_th", outlier_th, 0.25);
+  ROS_INFO("Outlier points threshold  is, [%.3f].", outlier_th);
   output_ = node.advertise<sensor_msgs::PointCloud2>("zvision_lidar_points", 20);
   output_colored_ = node.advertise<sensor_msgs::PointCloud2>("zvision_lidar_points_colored", 20);
 
@@ -63,6 +149,8 @@ Convert::Convert(ros::NodeHandle node, ros::NodeHandle private_nh) : data_(new z
   srv_->setCallback(f);
 
   data_->loadConfigFile(node, private_nh);
+  nearest_table_ = nullptr;
+//   if(data_->cal_init_ok_) nearest_table_ = get_nearest_point_index();
   // subscribe to zvisionlidarScan packets
   zvision_lidar_scan_ = node.subscribe("zvision_lidar_packets", 20, &Convert::processScan, (Convert*)this,
                                  ros::TransportHints().tcpNoDelay(true));
@@ -146,6 +234,40 @@ void Convert::processScan(const zvision_lidar_msgs::zvisionLidarScan::ConstPtr& 
       outPoints->header.stamp = time_from_pkt_s * 1000000 + time_from_pkt_us;
   }
 
+  pcl::PointCloud<pcl::PointXYZI>::Ptr  outputPtr(new pcl::PointCloud<pcl::PointXYZI>);
+  outputPtr->resize(outPoints->size());
+  outputPtr->header = outPoints->header;
+  if(nearest_table_ == nullptr && data_->cal_init_ok_){
+    nearest_table_ = get_nearest_point_index();
+  }
+  if(use_outlier_removal && nearest_table_ != nullptr){
+    pcl::PointXYZI point_nan;
+    point_nan.x = std::numeric_limits<float>::quiet_NaN();
+    point_nan.y = std::numeric_limits<float>::quiet_NaN();
+    point_nan.z = std::numeric_limits<float>::quiet_NaN();
+    point_nan.intensity = 0;
+    size_t point_valid = outPoints->size();
+    if(point_valid==108000 || point_valid==51200) {
+        for(size_t i = 0 ; i < point_valid; ++i){
+            size_t valid_neighbor = 0;
+            for(size_t j = (i * 8 + 1); j < (i * 8 + 8); ++j){
+                if(calDistance(outPoints->at(i),outPoints->at(nearest_table_[j])) < outlier_th){
+                    valid_neighbor++;
+                }
+            }
+            if(valid_neighbor >= 2){
+                    outputPtr->at(i) = outPoints->at(i);
+            }
+            else {
+                outputPtr->at(i) = point_nan;
+            }
+        }
+    }
+    else outputPtr = outPoints;
+  }
+  else outputPtr = outPoints;
+
+
   sensor_msgs::PointCloud2 outMsg;
   sensor_msgs::PointCloud2 outMsgColored;
   pcl::PointCloud<pcl::PointXYZI>::Ptr sampled_cloud(new pcl::PointCloud<pcl::PointXYZI>());
@@ -153,7 +275,7 @@ void Convert::processScan(const zvision_lidar_msgs::zvisionLidarScan::ConstPtr& 
   sampled_cloud->header.frame_id = scanMsg->header.frame_id;
   if(DownsampleType::Voxel == downsample_type_)
   {
-      voxel_grid_filter_.setInputCloud(outPoints);
+      voxel_grid_filter_.setInputCloud(outputPtr);
       voxel_grid_filter_.filter(*sampled_cloud);
       pcl::toROSMsg(*sampled_cloud, outMsg);
       pcl::PointCloud<pcl::PointXYZRGBA>::Ptr sampled_cloud_colored(new pcl::PointCloud<pcl::PointXYZRGBA>);
@@ -164,22 +286,22 @@ void Convert::processScan(const zvision_lidar_msgs::zvisionLidarScan::ConstPtr& 
         sampled_cloud_colored->at(i).x = sampled_cloud->at(i).x; 
         sampled_cloud_colored->at(i).y = sampled_cloud->at(i).y; 
         sampled_cloud_colored->at(i).z = sampled_cloud->at(i).z; 
-        sampled_cloud_colored->at(i).r = color_table[(int)outPoints->at(i).intensity *3 + 0]; 
-        sampled_cloud_colored->at(i).g = color_table[(int)outPoints->at(i).intensity *3 + 1]; 
-        sampled_cloud_colored->at(i).b = color_table[(int)outPoints->at(i).intensity *3 + 2];  
+        sampled_cloud_colored->at(i).r = color_table[(int)outputPtr->at(i).intensity *3 + 0]; 
+        sampled_cloud_colored->at(i).g = color_table[(int)outputPtr->at(i).intensity *3 + 1]; 
+        sampled_cloud_colored->at(i).b = color_table[(int)outputPtr->at(i).intensity *3 + 2];  
       }
       pcl::toROSMsg(*sampled_cloud_colored,outMsgColored);
   }
   else if(DownsampleType::Line == downsample_type_)
   {
-      sampled_cloud->resize(outPoints->size());
+      sampled_cloud->resize(outputPtr->size());
       int valid = 0;
       int line_interval = line_sample_;
       std::vector<int>& point_line_number = data_->point_line_number_;
-      for(int p = 0; p < outPoints->size(); p++)
+      for(int p = 0; p < outputPtr->size(); p++)
       {
           if(0 == (point_line_number[p] % (line_interval + 1)))
-              sampled_cloud->at(valid++) = outPoints->at(p);
+              sampled_cloud->at(valid++) = outputPtr->at(p);
       }
       sampled_cloud->height = 1;
       sampled_cloud->width = valid;
@@ -195,27 +317,27 @@ void Convert::processScan(const zvision_lidar_msgs::zvisionLidarScan::ConstPtr& 
         sampled_cloud_colored->at(i).x = sampled_cloud->at(i).x; 
         sampled_cloud_colored->at(i).y = sampled_cloud->at(i).y; 
         sampled_cloud_colored->at(i).z = sampled_cloud->at(i).z; 
-        sampled_cloud_colored->at(i).r = color_table[(int)outPoints->at(i).intensity *3 + 0]; 
-        sampled_cloud_colored->at(i).g = color_table[(int)outPoints->at(i).intensity *3 + 1]; 
-        sampled_cloud_colored->at(i).b = color_table[(int)outPoints->at(i).intensity *3 + 2];  
+        sampled_cloud_colored->at(i).r = color_table[(int)outputPtr->at(i).intensity *3 + 0]; 
+        sampled_cloud_colored->at(i).g = color_table[(int)outputPtr->at(i).intensity *3 + 1]; 
+        sampled_cloud_colored->at(i).b = color_table[(int)outputPtr->at(i).intensity *3 + 2];  
       }
       pcl::toROSMsg(*sampled_cloud_colored,outMsgColored);
   }
   else
   {
-      pcl::toROSMsg(*outPoints, outMsg);
+      pcl::toROSMsg(*outputPtr, outMsg);
 
       pcl::PointCloud<pcl::PointXYZRGBA>::Ptr sampled_cloud_colored(new pcl::PointCloud<pcl::PointXYZRGBA>);
-      sampled_cloud_colored->resize(outPoints->size());
-      sampled_cloud_colored->header.stamp = outPoints->header.stamp;
-      sampled_cloud_colored->header.frame_id = outPoints->header.frame_id;
+      sampled_cloud_colored->resize(outputPtr->size());
+      sampled_cloud_colored->header.stamp = outputPtr->header.stamp;
+      sampled_cloud_colored->header.frame_id = outputPtr->header.frame_id;
       for(int i = 0; i < sampled_cloud_colored->size();++i){
-        sampled_cloud_colored->at(i).x = outPoints->at(i).x; 
-        sampled_cloud_colored->at(i).y = outPoints->at(i).y; 
-        sampled_cloud_colored->at(i).z = outPoints->at(i).z; 
-        sampled_cloud_colored->at(i).r = color_table[(int)outPoints->at(i).intensity *3 + 0]; 
-        sampled_cloud_colored->at(i).g = color_table[(int)outPoints->at(i).intensity *3 + 1]; 
-        sampled_cloud_colored->at(i).b = color_table[(int)outPoints->at(i).intensity *3 + 2];  
+        sampled_cloud_colored->at(i).x = outputPtr->at(i).x; 
+        sampled_cloud_colored->at(i).y = outputPtr->at(i).y; 
+        sampled_cloud_colored->at(i).z = outputPtr->at(i).z; 
+        sampled_cloud_colored->at(i).r = color_table[(int)outputPtr->at(i).intensity *3 + 0]; 
+        sampled_cloud_colored->at(i).g = color_table[(int)outputPtr->at(i).intensity *3 + 1]; 
+        sampled_cloud_colored->at(i).b = color_table[(int)outputPtr->at(i).intensity *3 + 2];  
       }
       pcl::toROSMsg(*sampled_cloud_colored,outMsgColored);
   }

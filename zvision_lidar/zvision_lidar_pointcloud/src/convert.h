@@ -307,7 +307,8 @@ private:
   void callback(zvision_lidar_pointcloud::CloudNodeConfig& config, uint32_t level);
 
   void processScan(const zvision_lidar_msgs::zvisionLidarScan::ConstPtr& scanMsg);
-
+  int* get_nearest_point_index();
+  double calDistance(pcl::PointXYZI a, pcl::PointXYZI b);
   /// Pointer to dynamic reconfigure service srv_
   boost::shared_ptr<dynamic_reconfigure::Server<zvision_lidar_pointcloud::CloudNodeConfig> > srv_;
 
@@ -318,8 +319,11 @@ private:
   ros::Publisher output_colored_;
   pcl::VoxelGrid<pcl::PointXYZI> voxel_grid_filter_;
   bool filter_enable_;
+  bool use_outlier_removal;
+  double outlier_th;
   float leaf_size_;
   int line_sample_;
+  int* nearest_table_;
   DownsampleType downsample_type_;
 };
 

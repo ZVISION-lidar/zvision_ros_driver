@@ -5,7 +5,7 @@
   <arg name="udp_port" default="2368" />
   <arg name="angle_path" default="$(find zvision_lidar_pointcloud)/data/ML30S_A1_Default.cal" />
   <arg name="pcap" default="$(find zvision_lidar_pointcloud)/data/ML30S_A1_Default.pcap" />
-
+  
   <!-- start nodelet manager -->
   <node pkg="nodelet" type="nodelet" name="$(arg manager)" args="manager" output="screen"/>
 
@@ -15,7 +15,7 @@
     <param name="model" value="$(arg model)"/>
     <param name="device_ip" value="$(arg device_ip)" />
     <param name="udp_port" value="$(arg udp_port)" />
-	<param name="pcap" value="$(arg pcap)" />
+	  <param name="pcap" value="$(arg pcap)" />
   </node>
 
   <!-- load driver nodelet into it (udp packet to pointcloud)-->
@@ -31,6 +31,8 @@
     <param name="y_rot" value="0.0" />
     <param name="z_rot" value="0.0" />
     <param name="use_lidar_time" value="false" />
+    <param name="use_outlier_removal" value="false"/>
+    <param name="outlier_th" value="0.25"/>
   </node>
   
   <node name="rviz" pkg="rviz" type="rviz"  args="-d $(find zvision_lidar_pointcloud)/rviz_cfg/zvision_lidar.rviz" />

@@ -36,6 +36,8 @@
     <param name="y_rot" value="0.0" />
     <param name="z_rot" value="0.0" />
     <param name="use_lidar_time" value="false" />
+    <param name="use_outlier_removal" value="false"/>
+    <param name="outlier_th" value="0.25"/>
   </node>
   
   <node name="rviz" pkg="rviz" type="rviz"  args="-d $(find zvision_lidar_pointcloud)/rviz_cfg/zvision_lidar.rviz" />

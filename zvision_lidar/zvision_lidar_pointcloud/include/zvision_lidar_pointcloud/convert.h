@@ -57,7 +57,7 @@ private:
   float leaf_size_;
   int line_sample_;
   DownsampleType downsample_type_;
-  int* table_;
+  int* nearest_table_;
 };
 
 }  // namespace zvision_lidar_pointcloud

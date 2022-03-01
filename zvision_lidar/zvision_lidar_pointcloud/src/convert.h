@@ -319,8 +319,9 @@ private:
   ros::Publisher output_colored_;
   pcl::VoxelGrid<pcl::PointXYZI> voxel_grid_filter_;
   bool filter_enable_;
-  bool use_outlier_removal;
-  double outlier_th;
+  bool use_outlier_removal_;
+  double outlier_th_;
+  bool pub_colored_;
   float leaf_size_;
   int line_sample_;
   int* nearest_table_;

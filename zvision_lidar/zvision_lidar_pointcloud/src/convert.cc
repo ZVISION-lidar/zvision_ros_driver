@@ -134,10 +134,12 @@ Convert::Convert(ros::NodeHandle node, ros::NodeHandle private_nh) : data_(new z
       this->downsample_type_ = DownsampleType::None;
       ROS_INFO("Downsample type is [None] publish raw pointcloud.");
   }
-  private_nh.param("use_outlier_removal", use_outlier_removal, false);
-  ROS_INFO("use_outlier_removal: %c", use_outlier_removal?'y':'n');
-  private_nh.param("outlier_th", outlier_th, 0.25);
-  ROS_INFO("Outlier points threshold  is, [%.3f].", outlier_th);
+  private_nh.param("use_outlier_removal", use_outlier_removal_, false);
+  ROS_INFO("use_outlier_removal: %c", use_outlier_removal_?'y':'n');
+  private_nh.param("outlier_th", outlier_th_, 0.25);
+  ROS_INFO("Outlier points threshold  is, [%.3f].", outlier_th_);
+  private_nh.param("use_blue_gold_color_scheme", pub_colored_, false);
+  ROS_INFO("use_blue_gold_color_scheme: %c", pub_colored_?'y':'n');
   output_ = node.advertise<sensor_msgs::PointCloud2>("zvision_lidar_points", 20);
   output_colored_ = node.advertise<sensor_msgs::PointCloud2>("zvision_lidar_points_colored", 20);
 
@@ -240,7 +242,7 @@ void Convert::processScan(const zvision_lidar_msgs::zvisionLidarScan::ConstPtr& 
   if(nearest_table_ == nullptr && data_->cal_init_ok_){
     nearest_table_ = get_nearest_point_index();
   }
-  if(use_outlier_removal && nearest_table_ != nullptr){
+  if(use_outlier_removal_ && nearest_table_ != nullptr){
     pcl::PointXYZI point_nan;
     point_nan.x = std::numeric_limits<float>::quiet_NaN();
     point_nan.y = std::numeric_limits<float>::quiet_NaN();
@@ -251,7 +253,7 @@ void Convert::processScan(const zvision_lidar_msgs::zvisionLidarScan::ConstPtr& 
         for(size_t i = 0 ; i < point_valid; ++i){
             size_t valid_neighbor = 0;
             for(size_t j = (i * 8 + 1); j < (i * 8 + 8); ++j){
-                if(calDistance(outPoints->at(i),outPoints->at(nearest_table_[j])) < outlier_th){
+                if(calDistance(outPoints->at(i),outPoints->at(nearest_table_[j])) < outlier_th_){
                     valid_neighbor++;
                 }
             }
@@ -343,7 +345,7 @@ void Convert::processScan(const zvision_lidar_msgs::zvisionLidarScan::ConstPtr& 
   }
 
   output_.publish(outMsg);
-  output_colored_.publish(outMsgColored);
+  if(pub_colored_) output_colored_.publish(outMsgColored);
   
 
 

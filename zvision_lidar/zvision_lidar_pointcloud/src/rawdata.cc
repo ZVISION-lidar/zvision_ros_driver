@@ -154,7 +154,7 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
 		  {
               int point_num = group_index + laser_id;
               int disTemp = 0;
-
+              if(point_num >= 51200) continue;
 
 			  //dis_high
 			  unsigned char Dis_High = (u_char)(pc[0 + 4 * laser_id]);

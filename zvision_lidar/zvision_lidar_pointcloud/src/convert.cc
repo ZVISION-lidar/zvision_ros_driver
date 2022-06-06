@@ -89,7 +89,7 @@ int* Convert::get_nearest_point_index()
             {
                 for (int i = 0; i < near_cnt; i++)
                 {
-                    g_neighborhood_index_mlxs[cnt *  + i] = nn_indices[i];
+                    g_neighborhood_index_mlxs[cnt * near_cnt + i] = nn_indices[i];
                     // nearstIndexTabel.push_back(nn_indices[i]);
                 }
             }

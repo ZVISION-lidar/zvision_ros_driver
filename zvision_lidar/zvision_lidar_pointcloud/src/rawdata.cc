@@ -133,8 +133,19 @@ bool RawData::isCalibrationInitOk()
  *  @param pkt raw packet to unpack
  *  @param pc shared pointer to point cloud (points are appended)
  */
-void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::PointCloud<pcl::PointXYZI>::Ptr pointcloud)
+void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::PointCloud<pcl::PointXYZI>::Ptr pointcloud, std::vector<int>& fovs, std::vector<double>& stamps)
 {
+
+  // init fovs and stamps
+  if(fovs.size() !=pointcloud->size())
+      fovs.resize(pointcloud->size(),0);
+  if(stamps.size() !=pointcloud->size())
+      stamps.resize(pointcloud->size(),0);
+  long long time_from_pkt_s;
+  long long time_from_pkt_us;
+  getTimeStampFromUdpPkt(pkt, time_from_pkt_s, time_from_pkt_us);
+  double stamp_pkt =  (double)time_from_pkt_s + 0.000001f * (double)time_from_pkt_us ;
+
   float azimuth;
   int intensity;
   pcl::PointXYZI point;
@@ -145,6 +156,9 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
 
   if(device_type_ == zvision::ML30SA1)
   {
+    uint8_t fov_id[POINT_PER_GROUP] = {0,6,1,7,2,4,3,5};
+    // firing interval
+    float firing_interval_us = .0f;//0.00000078125f = 40 * 0.001/51200;
 	  for (int group = 0; group < GROUP_PER_PACKET; group++)   // 1 packet:40 data group
 	  {
 		  const unsigned char *pc = data + 4 + group * 8 * 4;/*group address*/
@@ -155,6 +169,9 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
               int point_num = group_index + laser_id;
               int disTemp = 0;
               if(point_num >= 51200) continue;
+
+        fovs[point_num] = fov_id[laser_id];
+        stamps[point_num] = stamp_pkt + firing_interval_us * (group * POINT_PER_GROUP + laser_id) ;
 
 			  //dis_high
 			  unsigned char Dis_High = (u_char)(pc[0 + 4 * laser_id]);
@@ -227,6 +244,8 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
   }
   else if(device_type_ == zvision::ML30B1)
   {
+    uint8_t fov_id[POINT_PER_GROUP_ML30] = {0,1,2};
+    float firing_interval_us = 0.0f;
 	  for (int group = 0; group < GROUP_PER_PACKET_ML30; group++)   // 1 packet:80 data group
 	  {
 		  const unsigned char *pc = data + 4 + group * 8 * 2;/*group address*/
@@ -236,6 +255,9 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
           {
               int point_num = group_index + laser_id;
               int disTemp = 0;
+
+        fovs[point_num] = fov_id[laser_id];
+        stamps[point_num] = stamp_pkt + firing_interval_us * (group * POINT_PER_GROUP_ML30 + laser_id) ;
 
 			  //dis_high
 			  unsigned char Dis_High = (u_char)(pc[4 + 4 * laser_id]);
@@ -306,6 +328,8 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
   }
   else if(device_type_ == zvision::MLX)
   {
+      uint8_t fov_id[POINT_PER_GROUP_MLX] = {0,1,2};
+      float firing_interval_us = 0.0f;
       for (int group = 0; group < GROUP_PER_PACKET_MLX; group++)   // 1 packet:80 data group
       {
           const unsigned char *pc = data + group * 8 * 2;/*group address*/
@@ -315,6 +339,9 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
           {
               int point_num = group_index + laser_id;
               int disTemp = 0;
+
+              fovs[point_num] = fov_id[laser_id];
+              stamps[point_num] = stamp_pkt + firing_interval_us * (group * POINT_PER_GROUP_MLX + laser_id) ;
 
               //dis_high
               unsigned char Dis_High = (u_char)(pc[4 + 4 * laser_id]);
@@ -385,6 +412,8 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
   }
   else if(device_type_ == zvision::MLXA1)
   {
+      uint8_t fov_id[POINT_PER_GROUP_MLX] = {0,1,2};
+      float firing_interval_us = 0.0f;
       for (int group = 0; group < GROUP_PER_PACKET_MLX; group++)   // 1 packet:80 data group
       {
           const unsigned char *pc = data + group * 8 * 2 + 4;/*group address*/
@@ -394,6 +423,9 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
           {
               int point_num = group_index + laser_id;
               int disTemp = 0;
+
+              fovs[point_num] = fov_id[laser_id];
+              stamps[point_num] = stamp_pkt + firing_interval_us * (group * POINT_PER_GROUP_MLX + laser_id) ;
 
               //dis_high
               unsigned char Dis_High = (u_char)(pc[4 + 4 * laser_id]);
@@ -464,6 +496,8 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
   }
   else if(device_type_ == zvision::MLXS)
   {
+      uint8_t fov_id[POINT_PER_GROUP_MLXS] = {0,1,2};
+      float firing_interval_us = 0.0f;
       for (int group = 0; group < GROUP_PER_PACKET_MLXS; group++)   // 1 packet:80 data group
       {
           const unsigned char *pc = data + group * 8 * 2 + 4;/*group address*/
@@ -473,6 +507,9 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
           {
               int point_num = group_index + laser_id;
               int disTemp = 0;
+
+              fovs[point_num] = fov_id[laser_id];
+              stamps[point_num] = stamp_pkt + firing_interval_us * (group * POINT_PER_GROUP_MLXS + laser_id) ;
 
               //dis_high
               unsigned char Dis_High = (u_char)(pc[4 + 4 * laser_id]);

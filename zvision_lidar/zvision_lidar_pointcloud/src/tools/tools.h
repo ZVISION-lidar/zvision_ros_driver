@@ -63,6 +63,23 @@ namespace zvision {
             static LidarType GetDeviceTypeFromTypeString(std::string tp);
             static void ComputePointLineNumber(PointCalibrationTable& cal_lut, std::vector<int>& line_numbers);
 
+            /** \brief Set lidar retro mode.
+            *   \param [in] en                true for enable,false for disable
+            */
+            static int SetDeviceRetroMode(std::string ip, bool en);
+
+            /** \brief Set lidar retro mode.
+            *   \param [in] en                true for enable,false for disable
+            */
+            static int GetDeviceRetroMode(std::string ip, bool& en);
+
+            /** \brief Reboot lidar.
+            */
+            static int RebootLidar(std::string ip);
+
+            /** \brief Get lidar state.
+            */
+            static bool GetLidarOnlineState(std::string ip);
     };
 }
 

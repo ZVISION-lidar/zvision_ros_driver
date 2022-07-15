@@ -81,8 +81,8 @@ public:
   /*calibration data is init ok or not*/
   bool isCalibrationInitOk();
 
-  /*unpack the ML30S-A1 UDP packet and opuput PCL PointXYZI type*/
-  void unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::PointCloud<pcl::PointXYZI>::Ptr pointcloud);
+  /*unpack the ML30S-A1 UDP packet and opuput PCL PointXYZI type with point fov id and timestamp*/
+  void unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::PointCloud<pcl::PointXYZI>::Ptr pointcloud, std::vector<int>& fovs, std::vector<double>& stamps);
 
   /*gps time stamp*/
   void getTimeStampFromUdpPkt(const zvision_lidar_msgs::zvisionLidarPacket& pkt, long long int& unix_sec, long long int&  unix_microsec);

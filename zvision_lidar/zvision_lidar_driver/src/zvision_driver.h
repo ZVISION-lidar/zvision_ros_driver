@@ -51,7 +51,7 @@ private:
 
   /// Pointer to dynamic reconfigure service srv_
   boost::shared_ptr<dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig> > srv_;
-
+  bool pub_cfg_srv_;
   // configuration parameters
   struct
   {

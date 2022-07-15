@@ -18,6 +18,7 @@
 #include "tools/tools.h"
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/filters/statistical_outlier_removal.h>
+#include "zvision_lidar_point_cloud_type.h"
 namespace zvision_lidar_pointcloud
 {
 std::string model;
@@ -138,17 +139,31 @@ Convert::Convert(ros::NodeHandle node, ros::NodeHandle private_nh) : data_(new z
   ROS_INFO("use_outlier_removal: %c", use_outlier_removal_?'y':'n');
   private_nh.param("outlier_th", outlier_th_, 0.25);
   ROS_INFO("Outlier points threshold  is, [%.3f].", outlier_th_);
+  
+  private_nh.param("publisher_pointcloud_type_xyzi", pub_xyzi_, true);
+  ROS_INFO("publisher_pointcloud_type_xyzi: %c", pub_xyzi_?'y':'n');
+  if(pub_xyzi_) 
+    output_ = node.advertise<sensor_msgs::PointCloud2>("zvision_lidar_points", 20);
+
   private_nh.param("use_blue_gold_color_scheme", pub_colored_, false);
   ROS_INFO("use_blue_gold_color_scheme: %c", pub_colored_?'y':'n');
-  output_ = node.advertise<sensor_msgs::PointCloud2>("zvision_lidar_points", 20);
-  output_colored_ = node.advertise<sensor_msgs::PointCloud2>("zvision_lidar_points_colored", 20);
+  if(pub_colored_)
+    output_colored_ = node.advertise<sensor_msgs::PointCloud2>("zvision_lidar_points_colored", 20);
+
+  private_nh.param("publisher_pointcloud_type_xyzirt", pub_xyzirt_, false);
+  ROS_INFO("publisher_pointcloud_type_xyzirt: %c", pub_xyzirt_?'y':'n');
+  if(pub_xyzirt_)
+    out_xyzirt_ = node.advertise<sensor_msgs::PointCloud2>("zvision_lidar_points_xyzirt", 20);
 
   //srv_question
-  srv_ = boost::make_shared<dynamic_reconfigure::Server<zvision_lidar_pointcloud::CloudNodeConfig> >(private_nh);
-  dynamic_reconfigure::Server<zvision_lidar_pointcloud::CloudNodeConfig>::CallbackType f;
-
-  f = boost::bind(&Convert::callback, this, _1, _2);
-  srv_->setCallback(f);
+  private_nh.param("dynamic_reconfigure_server", pub_cfg_srv_, true);
+  ROS_INFO("dynamic_reconfigure_server: %c", pub_cfg_srv_?'y':'n');
+  if(pub_cfg_srv_){
+    srv_ = boost::make_shared<dynamic_reconfigure::Server<zvision_lidar_pointcloud::CloudNodeConfig> >(private_nh);
+    dynamic_reconfigure::Server<zvision_lidar_pointcloud::CloudNodeConfig>::CallbackType f;
+    f = boost::bind(&Convert::callback, this, _1, _2);
+    srv_->setCallback(f);
+  }
 
   data_->loadConfigFile(node, private_nh);
   nearest_table_ = nullptr;
@@ -171,9 +186,6 @@ void Convert::callback(zvision_lidar_pointcloud::CloudNodeConfig& config, uint32
   data_->z_rotation = config.z_rotation / 180.0 * M_PI;
   // config_.time_offset = config.time_offset;
 }
-
-
-
 
 
 /** @brief Callback for raw scan messages. *///IMPORTANT
@@ -225,16 +237,21 @@ void Convert::processScan(const zvision_lidar_msgs::zvisionLidarScan::ConstPtr& 
       outPoints->resize(outPoints->height * outPoints->width);
   }
 
-  for (size_t i = 0; i < scanMsg->packets.size(); ++i)
-  {
-      data_->unpack(scanMsg->packets[i], outPoints);
-  }
-
+  // get lidar first firing point timestamp
   if((true == data_->use_lidar_time_) && (scanMsg->packets.size()))
   {
       data_->getTimeStampFromUdpPkt(scanMsg->packets[0], time_from_pkt_s, time_from_pkt_us);
       outPoints->header.stamp = time_from_pkt_s * 1000000 + time_from_pkt_us;
   }
+
+  // parse packets
+  std::vector<int> fov_points(outPoints->size(),0);
+  std::vector<double> stamp_points(outPoints->size(),1.0f * outPoints->header.stamp / 1000000);
+  for (size_t i = 0; i < scanMsg->packets.size(); ++i)
+  {
+      data_->unpack(scanMsg->packets[i], outPoints,fov_points,stamp_points);
+  }
+
 
   pcl::PointCloud<pcl::PointXYZI>::Ptr  outputPtr(new pcl::PointCloud<pcl::PointXYZI>);
   outputPtr->resize(outPoints->size());
@@ -269,16 +286,47 @@ void Convert::processScan(const zvision_lidar_msgs::zvisionLidarScan::ConstPtr& 
   }
   else outputPtr = outPoints;
 
-
   sensor_msgs::PointCloud2 outMsg;
   sensor_msgs::PointCloud2 outMsgColored;
+  sensor_msgs::PointCloud2 out_msg_xyzirt;
+
+  // pointcloud downsampling
   pcl::PointCloud<pcl::PointXYZI>::Ptr sampled_cloud(new pcl::PointCloud<pcl::PointXYZI>());
   sampled_cloud->header.stamp = pcl_conversions::toPCL(scanMsg->header).stamp;
   sampled_cloud->header.frame_id = scanMsg->header.frame_id;
+  // point indices
+  std::vector<int> index_used;
+  for(int i = 0;i<outputPtr->size();i++) index_used.push_back(i);
   if(DownsampleType::Voxel == downsample_type_)
   {
-      voxel_grid_filter_.setInputCloud(outputPtr);
-      voxel_grid_filter_.filter(*sampled_cloud);
+      /* update index_used */
+      if(pub_xyzirt_){
+        // set point index with intensity
+        pcl::PointCloud<pcl::PointXYZI>::Ptr temp_cloud(new pcl::PointCloud<pcl::PointXYZI>());
+        temp_cloud->header = outPoints->header;
+        temp_cloud->points = outputPtr->points;
+        int id = 0;
+        for(auto& p:temp_cloud->points){
+          p.intensity = id;
+          id++;
+        }
+        // filter temp pointcloud
+        voxel_grid_filter_.setInputCloud(temp_cloud);
+        voxel_grid_filter_.filter(*sampled_cloud);
+        // update intensity
+        index_used.clear();
+        index_used.shrink_to_fit();
+        for(auto&p:sampled_cloud->points){
+          int idx = int(p.intensity);
+          index_used.push_back(idx);
+          p.intensity = outputPtr->points[idx].intensity;
+        }
+      }
+      else{
+        voxel_grid_filter_.setInputCloud(outputPtr);
+        voxel_grid_filter_.filter(*sampled_cloud);
+      }
+
       pcl::toROSMsg(*sampled_cloud, outMsg);
       pcl::PointCloud<pcl::PointXYZRGBA>::Ptr sampled_cloud_colored(new pcl::PointCloud<pcl::PointXYZRGBA>);
       sampled_cloud_colored->resize(sampled_cloud->size());
@@ -300,10 +348,15 @@ void Convert::processScan(const zvision_lidar_msgs::zvisionLidarScan::ConstPtr& 
       int valid = 0;
       int line_interval = line_sample_;
       std::vector<int>& point_line_number = data_->point_line_number_;
+      // update index_used
+      index_used.clear();
+      index_used.shrink_to_fit();
       for(int p = 0; p < outputPtr->size(); p++)
       {
-          if(0 == (point_line_number[p] % (line_interval + 1)))
+          if(0 == (point_line_number[p] % (line_interval + 1))){
               sampled_cloud->at(valid++) = outputPtr->at(p);
+              index_used.push_back(p);
+          }
       }
       sampled_cloud->height = 1;
       sampled_cloud->width = valid;
@@ -344,13 +397,51 @@ void Convert::processScan(const zvision_lidar_msgs::zvisionLidarScan::ConstPtr& 
       pcl::toROSMsg(*sampled_cloud_colored,outMsgColored);
   }
 
-  output_.publish(outMsg);
+  if(pub_xyzi_) output_.publish(outMsg);
+
   if(pub_colored_) output_colored_.publish(outMsgColored);
   
+  /* generate point xyzirt data */
+  if(pub_xyzirt_){
+    // we generate pointcloud xyzirt data
+    pcl::PointCloud<pcl::PointXYZI>::Ptr dst_cloud  = nullptr;
+    if(DownsampleType::None == downsample_type_ )
+      dst_cloud = outputPtr;
+    else
+      dst_cloud = sampled_cloud;
 
+    bool use_rt = false;
+    if(index_used.size() == dst_cloud->size())
+      use_rt=true;
+    else    ROS_WARN_ONCE("Disable RT output for used index size [%lu] not matched with destination pointcloud size [%lu].",index_used.size(),dst_cloud->size());
 
+    pcl::PointCloud<ZvPointXYZIRT>::Ptr dst_cloud_xyzirt(new pcl::PointCloud<ZvPointXYZIRT>);
+    dst_cloud_xyzirt->resize(dst_cloud->size());
+    dst_cloud_xyzirt->header.stamp = dst_cloud->header.stamp;
+    dst_cloud_xyzirt->header.frame_id = dst_cloud->header.frame_id;
+    for(int it = 0;it<dst_cloud->size();it++){
+      ZvPointXYZIRT p;
+      p.x = dst_cloud->at(it).x;
+      p.y = dst_cloud->at(it).y;
+      p.z = dst_cloud->at(it).z;
+      p.intensity = (uint8_t)dst_cloud->at(it).intensity;
 
-   
+      // we now filter timestamp and fov id for filtered  point
+      if(use_rt){
+        p.ring = fov_points[index_used[it]];
+        p.timestamp =  stamp_points[index_used[it]];
+      }
+      else{
+        p.ring = 0;
+        p.timestamp =  dst_cloud->header.stamp;
+      }
+      dst_cloud_xyzirt->at(it) = p;
+    }
+
+    pcl::toROSMsg(*dst_cloud_xyzirt, out_msg_xyzirt);
+    out_xyzirt_.publish(out_msg_xyzirt);
+  }
+
 
 }
 

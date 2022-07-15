@@ -27,6 +27,8 @@ zvisionLidarDriver::zvisionLidarDriver(ros::NodeHandle node, ros::NodeHandle pri
   ROS_DEBUG_STREAM("tf_prefix: " << tf_prefix);
   config_.frame_id = tf::resolve(tf_prefix, config_.frame_id);
 
+  private_nh.param("dynamic_reconfigure_server", pub_cfg_srv_, true);
+  ROS_INFO("dynamic_reconfigure_server: %c", pub_cfg_srv_?'y':'n');
 
   private_nh.param("model", config_.model, std::string("ML30SA1"));
 
@@ -75,11 +77,12 @@ zvisionLidarDriver::zvisionLidarDriver(ros::NodeHandle node, ros::NodeHandle pri
 	  private_nh.param("udp_port", port_to_recv_udppkt, (int)UDP_DATA_PORT_NUMBER);
 
 	  // Initialize dynamic reconfigure
-	  srv_ = boost::make_shared<dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig> >(private_nh);
-	  dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig>::CallbackType f;
-	  f = boost::bind(&zvisionLidarDriver::callback, this, _1, _2);
-	  srv_->setCallback(f);  // Set callback function und call initially
-
+    if(pub_cfg_srv_){
+	    srv_ = boost::make_shared<dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig> >(private_nh);
+	    dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig>::CallbackType f;
+	    f = boost::bind(&zvisionLidarDriver::callback, this, _1, _2);
+	    srv_->setCallback(f);  // Set callback function und call initially
+    }
 	  // initialize diagnostics
 	  diagnostics_.setHardwareID(deviceName);
 	  const double diag_freq = packet_rate_ML30 / config_.npackets;
@@ -119,11 +122,12 @@ zvisionLidarDriver::zvisionLidarDriver(ros::NodeHandle node, ros::NodeHandle pri
 	  private_nh.param("udp_port", port_to_recv_udppkt, (int)UDP_DATA_PORT_NUMBER);
 
 	  // Initialize dynamic reconfigure
-	  srv_ = boost::make_shared<dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig> >(private_nh);
-	  dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig>::CallbackType f;
-	  f = boost::bind(&zvisionLidarDriver::callback, this, _1, _2);
-	  srv_->setCallback(f);  // Set callback function und call initially
-
+    if(pub_cfg_srv_){
+	    srv_ = boost::make_shared<dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig> >(private_nh);
+	    dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig>::CallbackType f;
+	    f = boost::bind(&zvisionLidarDriver::callback, this, _1, _2);
+	    srv_->setCallback(f);  // Set callback function und call initially
+    }
 	  // initialize diagnostics
 	  diagnostics_.setHardwareID(deviceName);
       const double diag_freq = packet_rate_ML30S_A1 / config_.npackets;
@@ -161,11 +165,12 @@ zvisionLidarDriver::zvisionLidarDriver(ros::NodeHandle node, ros::NodeHandle pri
       private_nh.param("udp_port", port_to_recv_udppkt, (int)UDP_DATA_PORT_NUMBER);
 
       // Initialize dynamic reconfigure
-      srv_ = boost::make_shared<dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig> >(private_nh);
-      dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig>::CallbackType f;
-      f = boost::bind(&zvisionLidarDriver::callback, this, _1, _2);
-      srv_->setCallback(f);  // Set callback function und call initially
-
+      if(pub_cfg_srv_){
+        srv_ = boost::make_shared<dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig> >(private_nh);
+        dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig>::CallbackType f;
+        f = boost::bind(&zvisionLidarDriver::callback, this, _1, _2);
+        srv_->setCallback(f);  // Set callback function und call initially
+      }
       // initialize diagnostics
       diagnostics_.setHardwareID(deviceName);
       const double diag_freq = packet_rate_MLX / config_.npackets;
@@ -203,11 +208,12 @@ zvisionLidarDriver::zvisionLidarDriver(ros::NodeHandle node, ros::NodeHandle pri
       private_nh.param("udp_port", port_to_recv_udppkt, (int)UDP_DATA_PORT_NUMBER);
 
       // Initialize dynamic reconfigure
-      srv_ = boost::make_shared<dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig> >(private_nh);
-      dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig>::CallbackType f;
-      f = boost::bind(&zvisionLidarDriver::callback, this, _1, _2);
-      srv_->setCallback(f);  // Set callback function und call initially
-
+      if(pub_cfg_srv_){
+        srv_ = boost::make_shared<dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig> >(private_nh);
+        dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig>::CallbackType f;
+        f = boost::bind(&zvisionLidarDriver::callback, this, _1, _2);
+        srv_->setCallback(f);  // Set callback function und call initially
+      }
       // initialize diagnostics
       diagnostics_.setHardwareID(deviceName);
       const double diag_freq = packet_rate_MLXA1 / config_.npackets;
@@ -245,11 +251,12 @@ zvisionLidarDriver::zvisionLidarDriver(ros::NodeHandle node, ros::NodeHandle pri
       private_nh.param("udp_port", port_to_recv_udppkt, (int)UDP_DATA_PORT_NUMBER);
 
       // Initialize dynamic reconfigure
-      srv_ = boost::make_shared<dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig> >(private_nh);
-      dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig>::CallbackType f;
-      f = boost::bind(&zvisionLidarDriver::callback, this, _1, _2);
-      srv_->setCallback(f);  // Set callback function und call initially
-
+      if(pub_cfg_srv_){
+        srv_ = boost::make_shared<dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig> >(private_nh);
+        dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig>::CallbackType f;
+        f = boost::bind(&zvisionLidarDriver::callback, this, _1, _2);
+        srv_->setCallback(f);  // Set callback function und call initially
+      }
       // initialize diagnostics
       diagnostics_.setHardwareID(deviceName);
       const double diag_freq = packet_rate_MLXS / config_.npackets;

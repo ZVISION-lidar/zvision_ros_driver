@@ -651,4 +651,157 @@ namespace zvision {
         }
     }
 
+    int LidarTools::SetDeviceRetroMode(std::string ip, bool en){
+        /* connect to device */
+        TcpClient client(1000, 1000, 1000);
+        int ret = client.Connect(ip);
+        if (ret)
+        {
+            ROS_ERROR_STREAM("Connect error: " << client.GetSysErrorCode());
+            return -1;
+        }
+
+        /*Set device retro command*/
+        const int send_len = 4;
+        char set_cmd[send_len] = { (char)0xAB, (char)0x03, (char)0x00, (char)0x00 };
+        if (en)
+            set_cmd[2] = 0x01;
+        else
+            set_cmd[2] = 0x00;
+
+        /* send */
+        std::string cmd(set_cmd, send_len);
+        if (client.SyncSend(cmd, send_len))
+        {
+            client.Close();
+            return -1;
+        }
+
+        /* receive */
+        const int recv_len = 4;
+        std::string recv(recv_len, 'x');
+        if(client.SyncRecv(recv, recv_len))
+        {
+            client.Close();
+            return -1;
+        }
+
+        /* check ret */
+        if (!CheckDeviceRet(recv))
+        {
+            client.Close();
+            return -1;
+        }
+
+        client.Close();
+        return 0;
+    }
+
+    int LidarTools::GetDeviceRetroMode(std::string ip, bool& en){
+
+        /* connect to device */
+        TcpClient client(1000, 1000, 1000);
+        int ret = client.Connect(ip);
+        if (ret)
+        {
+            ROS_ERROR_STREAM("Connect error: " << client.GetSysErrorCode());
+            return -1;
+        }
+
+        /* send */
+        const int send_len = 4;
+        char cfg_read_cmd[send_len] = { (char)0xBA, (char)0x0B, (char)0x00, (char)0x00 };
+        std::string cmd(cfg_read_cmd, 4);
+        if (client.SyncSend(cmd, send_len))
+        {
+            client.Close();
+            return -1;
+        }
+
+        /* receive ret */
+        const int recv_len = 110;
+        std::string recv(recv_len, 'x');
+        if (client.SyncRecv(recv, 4))
+        {
+            client.Close();
+            return -1;
+        }
+
+        /* check ret */
+        if (!CheckDeviceRet(recv))
+        {
+            client.Close();
+            return -1;
+        }
+
+        /* receive info */
+        if (client.SyncRecv(recv, 106))
+        {
+            client.Close();
+            return -1;
+        }
+
+        /* get retro state */
+        unsigned char* header = (unsigned char*)recv.c_str();
+        unsigned char retro = (*(header + 45));
+        if ((0xFF == retro) || (0x00 == retro))
+        {
+            en = false;
+        }
+        else if (0x01 == retro)
+        {
+           en = true;
+        }
+
+        client.Close();
+        return 0;
+    }
+
+    int LidarTools::RebootLidar(std::string ip){
+
+        /* connect to device */
+        TcpClient client(1000, 1000, 1000);
+        int ret = client.Connect(ip);
+        if (ret)
+        {
+            ROS_ERROR_STREAM("Connect error: " << client.GetSysErrorCode());
+            return -1;
+        }
+
+        /* send */
+        const int send_len = 4;
+        char set_cmd[send_len] = { (char)0xBA, (char)0x0C, (char)0x00, (char)0x00 };
+        std::string cmd(set_cmd, send_len);
+        if (client.SyncSend(cmd, send_len))
+        {
+            client.Close();
+            return -1;
+        }
+
+        /* receive ret */
+        const int recv_len = 4;
+        std::string recv(recv_len, 'x');
+        if (client.SyncRecv(recv, recv_len))
+        {
+            client.Close();
+            return -1;
+        }
+
+        /* check ret */
+        if (!CheckDeviceRet(recv))
+        {
+            client.Close();
+            return -1;
+        }
+
+        client.Close();
+        return 0;
+    }
+
+    bool LidarTools::GetLidarOnlineState(std::string ip){
+        /* connect to device */
+        TcpClient client(1000, 1000, 1000);
+        return client.Connect(ip) == 0;
+    }
+
 }

@@ -12,6 +12,7 @@
  */
 
 #include <string>
+#include<thread>
 #include <boost/thread.hpp>
 
 #include <ros/ros.h>
@@ -47,9 +48,9 @@ private:
   virtual void devicePoll(void);
 
   volatile bool running_;  ///< device thread is running
-  boost::shared_ptr<boost::thread> deviceThread_;
+  /**/std::shared_ptr</**/std::thread> deviceThread_;
 
-  boost::shared_ptr<zvisionLidarDriver> dvr_;  ///< driver implementation class
+  /**/std::shared_ptr<zvisionLidarDriver> dvr_;  ///< driver implementation class
 };
 
 void DriverNodelet::onInit()
@@ -59,7 +60,7 @@ void DriverNodelet::onInit()
 
   // spawn device poll thread
   running_ = true;
-  deviceThread_ = boost::shared_ptr<boost::thread>(new boost::thread(boost::bind(&DriverNodelet::devicePoll, this)));
+  deviceThread_ = /**/std::shared_ptr</**/std::thread>(new /**/std::thread(/**/std::bind(&DriverNodelet::devicePoll, this)));
   // NODELET_INFO("DriverNodelet onInit");
 }
 

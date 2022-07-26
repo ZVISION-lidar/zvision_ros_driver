@@ -78,10 +78,8 @@ zvisionLidarDriver::zvisionLidarDriver(ros::NodeHandle node, ros::NodeHandle pri
 
 	  // Initialize dynamic reconfigure
     if(pub_cfg_srv_){
-	    srv_ = boost::make_shared<dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig> >(private_nh);
-	    dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig>::CallbackType f;
-	    f = boost::bind(&zvisionLidarDriver::callback, this, _1, _2);
-	    srv_->setCallback(f);  // Set callback function und call initially
+	    srv_ = /**/std::make_shared<dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig> >(private_nh);
+	    srv_->setCallback(std::bind(&zvisionLidarDriver::callback, this, std::placeholders::_1,std::placeholders::_2));
     }
 	  // initialize diagnostics
 	  diagnostics_.setHardwareID(deviceName);
@@ -123,10 +121,9 @@ zvisionLidarDriver::zvisionLidarDriver(ros::NodeHandle node, ros::NodeHandle pri
 
 	  // Initialize dynamic reconfigure
     if(pub_cfg_srv_){
-	    srv_ = boost::make_shared<dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig> >(private_nh);
-	    dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig>::CallbackType f;
-	    f = boost::bind(&zvisionLidarDriver::callback, this, _1, _2);
-	    srv_->setCallback(f);  // Set callback function und call initially
+	    srv_ = /**/std::make_shared<dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig> >(private_nh);
+      // Set callback function und call initially
+	    srv_->setCallback(std::bind(&zvisionLidarDriver::callback, this, std::placeholders::_1, std::placeholders::_2));
     }
 	  // initialize diagnostics
 	  diagnostics_.setHardwareID(deviceName);
@@ -166,10 +163,9 @@ zvisionLidarDriver::zvisionLidarDriver(ros::NodeHandle node, ros::NodeHandle pri
 
       // Initialize dynamic reconfigure
       if(pub_cfg_srv_){
-        srv_ = boost::make_shared<dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig> >(private_nh);
-        dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig>::CallbackType f;
-        f = boost::bind(&zvisionLidarDriver::callback, this, _1, _2);
-        srv_->setCallback(f);  // Set callback function und call initially
+        srv_ = /**/std::make_shared<dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig> >(private_nh);
+        // Set callback function und call initially
+        srv_->setCallback(std::bind(&zvisionLidarDriver::callback, this, std::placeholders::_1, std::placeholders::_2));
       }
       // initialize diagnostics
       diagnostics_.setHardwareID(deviceName);
@@ -209,10 +205,9 @@ zvisionLidarDriver::zvisionLidarDriver(ros::NodeHandle node, ros::NodeHandle pri
 
       // Initialize dynamic reconfigure
       if(pub_cfg_srv_){
-        srv_ = boost::make_shared<dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig> >(private_nh);
-        dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig>::CallbackType f;
-        f = boost::bind(&zvisionLidarDriver::callback, this, _1, _2);
-        srv_->setCallback(f);  // Set callback function und call initially
+        srv_ = /**/std::make_shared<dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig> >(private_nh);
+        // Set callback function und call initially
+        srv_->setCallback(std::bind(&zvisionLidarDriver::callback, this, std::placeholders::_1, std::placeholders::_2));
       }
       // initialize diagnostics
       diagnostics_.setHardwareID(deviceName);
@@ -252,10 +247,9 @@ zvisionLidarDriver::zvisionLidarDriver(ros::NodeHandle node, ros::NodeHandle pri
 
       // Initialize dynamic reconfigure
       if(pub_cfg_srv_){
-        srv_ = boost::make_shared<dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig> >(private_nh);
-        dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig>::CallbackType f;
-        f = boost::bind(&zvisionLidarDriver::callback, this, _1, _2);
-        srv_->setCallback(f);  // Set callback function und call initially
+        srv_ = /**/std::make_shared<dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig> >(private_nh);
+        // Set callback function und call initially
+        srv_->setCallback(std::bind(&zvisionLidarDriver::callback, this, std::placeholders::_1, std::placeholders::_2));
       }
       // initialize diagnostics
       diagnostics_.setHardwareID(deviceName);

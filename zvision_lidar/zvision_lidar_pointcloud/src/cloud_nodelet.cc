@@ -33,7 +33,7 @@ public:
 
 private:
   virtual void onInit();
-  boost::shared_ptr<Convert> conv_;
+  /**/std::shared_ptr<Convert> conv_;
 };
 
 /** @brief Nodelet initialization. */

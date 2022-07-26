@@ -16,6 +16,7 @@
 #define _ZVISION_DRIVER_H_
 
 #include <string>
+#include<functional>
 #include <ros/ros.h>
 #include <ros/package.h>
 #include <diagnostic_updater/diagnostic_updater.h>
@@ -50,7 +51,7 @@ private:
   void callback(zvision_lidar_driver::zvisionLidarNodeConfig& config, uint32_t level);
 
   /// Pointer to dynamic reconfigure service srv_
-  boost::shared_ptr<dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig> > srv_;
+  /**/std::shared_ptr<dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig> > srv_;
   bool pub_cfg_srv_;
   // configuration parameters
   struct
@@ -61,14 +62,14 @@ private:
     double time_offset;    ///< time in seconds added to each  time stamp
   } config_;
 
-  boost::shared_ptr<Input> input_;
+  /**/std::shared_ptr<Input> input_;
   ros::Publisher output_;
   // Converter convtor_;
   /** diagnostics updater */
   diagnostic_updater::Updater diagnostics_;
   double diag_min_freq_;
   double diag_max_freq_;
-  boost::shared_ptr<diagnostic_updater::TopicDiagnostic> diag_topic_;//diagnose_topic
+  /**/std::shared_ptr<diagnostic_updater::TopicDiagnostic> diag_topic_;//diagnose_topic
 };
 
 }  // namespace zvision_lidar_driver

@@ -32,7 +32,7 @@
     <param name="z_rot" value="0.0" />
     <param name="use_lidar_time" value="false" />
     <param name="use_outlier_removal" value="false"/>
-    <param name="outlier_th" value="0.25"/>
+    <param name="outlier_th" value="0.05"/>
     <param name="use_blue_gold_color_scheme" value="$(arg use_blue_gold_color_scheme)"/>
   </node>
   

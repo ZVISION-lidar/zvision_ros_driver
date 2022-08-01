@@ -137,7 +137,7 @@ Convert::Convert(ros::NodeHandle node, ros::NodeHandle private_nh) : data_(new z
   }
   private_nh.param("use_outlier_removal", use_outlier_removal_, false);
   ROS_INFO("use_outlier_removal: %c", use_outlier_removal_?'y':'n');
-  private_nh.param("outlier_th", outlier_th_, 0.25);
+  private_nh.param("outlier_th", outlier_th_, 0.05);
   ROS_INFO("Outlier points threshold  is, [%.3f].", outlier_th_);
   
   private_nh.param("publisher_pointcloud_type_xyzi", pub_xyzi_, true);
@@ -264,21 +264,56 @@ void Convert::processScan(const zvision_lidar_msgs::zvisionLidarScan::ConstPtr& 
     point_nan.z = std::numeric_limits<float>::quiet_NaN();
     point_nan.intensity = 0;
     size_t point_valid = outPoints->size();
-    if(point_valid==108000 || point_valid==51200) {
-        for(size_t i = 0 ; i < point_valid; ++i){
-            size_t valid_neighbor = 0;
-            for(size_t j = (i * 8 + 1); j < (i * 8 + 8); ++j){
-                if(calDistance(outPoints->at(i),outPoints->at(nearest_table_[j])) < outlier_th_){
-                    valid_neighbor++;
-                }
-            }
-            if(valid_neighbor >= 2){
-                    outputPtr->at(i) = outPoints->at(i);
-            }
-            else {
-                outputPtr->at(i) = point_nan;
-            }
+
+    size_t invaild_point_num = 0;
+    size_t nan_point_num = 0;
+    double dis_coeff = powf(outlier_th_, 2);
+    if (point_valid == 108000 || point_valid == 51200)
+    {
+    for (size_t i = 0; i < point_valid; ++i)
+    {
+        size_t valid_neighbor = 0;
+
+        // 无效点与0距离跳过
+        if (std::isnan(outPoints->at(i).x))
+        {
+        nan_point_num++;
+        continue;
         }
+        if (outPoints->at(i).x == 0 && outPoints->at(i).y == 0 && outPoints->at(i).z == 0)
+        {
+        outputPtr->at(i) = point_nan;
+        nan_point_num++;
+        continue;
+        }
+
+        // 动态阈值计算
+        auto outlier_th_square = dis_coeff * (powf(outPoints->at(i).x, 2) + powf(outPoints->at(i).y, 2) + powf(outPoints->at(i).z, 2));
+        for (size_t j = (i * 8); j < (i * 8 + 8); j++)
+        {
+        double _distance = calDistance(outPoints->at(i), outPoints->at(nearest_table_[j]));
+        if (_distance < outlier_th_square)
+        {
+            valid_neighbor++;
+            if (valid_neighbor >= 2)
+            break;
+        }
+        }
+
+        // 离群值判断
+        if (valid_neighbor >= 2)
+        {
+        outputPtr->at(i) = outPoints->at(i);
+        }
+        else
+        {
+        outputPtr->at(i) = point_nan;
+        invaild_point_num++;
+        }
+    }
+    std::cout << "invalid point : " << nan_point_num << std::endl;
+    std::cout << "deleted point : " << invaild_point_num << std::endl;
+    ROS_INFO("point sum is %d", outPoints->size());
     }
     else outputPtr = outPoints;
   }

@@ -64,7 +64,8 @@ zvisionLidarDriver::zvisionLidarDriver(ros::NodeHandle node, ros::NodeHandle pri
   }
   std::string deviceName(std::string("Zvision ") + model_full_name);
 
-
+  if(pub_cfg_srv_)
+    diagnostics_.reset(new diagnostic_updater::Updater);
   if(config_.model == "ML30B1"){
 	  int npackets = 125;
 	  private_nh.param("npackets", config_.npackets, npackets);
@@ -82,13 +83,15 @@ zvisionLidarDriver::zvisionLidarDriver(ros::NodeHandle node, ros::NodeHandle pri
 	    srv_->setCallback(std::bind(&zvisionLidarDriver::callback, this, std::placeholders::_1,std::placeholders::_2));
     }
 	  // initialize diagnostics
-	  diagnostics_.setHardwareID(deviceName);
+    if(pub_cfg_srv_)
+	    diagnostics_->setHardwareID(deviceName);
 	  const double diag_freq = packet_rate_ML30 / config_.npackets;
 	  diag_max_freq_ = diag_freq;
 	  diag_min_freq_ = diag_freq;
 
 	  using namespace diagnostic_updater;
-	  diag_topic_.reset(new TopicDiagnostic("zvision_lidar_packets", diagnostics_,
+    if(pub_cfg_srv_)
+	    diag_topic_.reset(new TopicDiagnostic("zvision_lidar_packets", *(diagnostics_.get()),
 	                                        FrequencyStatusParam(&diag_min_freq_, &diag_max_freq_, 0.1, 10),
 	                                        TimeStampStatusParam()));
 
@@ -126,13 +129,15 @@ zvisionLidarDriver::zvisionLidarDriver(ros::NodeHandle node, ros::NodeHandle pri
 	    srv_->setCallback(std::bind(&zvisionLidarDriver::callback, this, std::placeholders::_1, std::placeholders::_2));
     }
 	  // initialize diagnostics
-	  diagnostics_.setHardwareID(deviceName);
-      const double diag_freq = packet_rate_ML30S_A1 / config_.npackets;
+    if(pub_cfg_srv_)
+	    diagnostics_->setHardwareID(deviceName);
+    const double diag_freq = packet_rate_ML30S_A1 / config_.npackets;
 	  diag_max_freq_ = diag_freq;
 	  diag_min_freq_ = diag_freq;
 
 	  using namespace diagnostic_updater;
-	  diag_topic_.reset(new TopicDiagnostic("zvision_lidar_packets", diagnostics_,
+    if(pub_cfg_srv_)
+	    diag_topic_.reset(new TopicDiagnostic("zvision_lidar_packets", *(diagnostics_.get()),
 	                                        FrequencyStatusParam(&diag_min_freq_, &diag_max_freq_, 0.1, 10),
 	                                        TimeStampStatusParam()));
 
@@ -168,13 +173,15 @@ zvisionLidarDriver::zvisionLidarDriver(ros::NodeHandle node, ros::NodeHandle pri
         srv_->setCallback(std::bind(&zvisionLidarDriver::callback, this, std::placeholders::_1, std::placeholders::_2));
       }
       // initialize diagnostics
-      diagnostics_.setHardwareID(deviceName);
+      if(pub_cfg_srv_)
+        diagnostics_->setHardwareID(deviceName);
       const double diag_freq = packet_rate_MLX / config_.npackets;
       diag_max_freq_ = diag_freq;
       diag_min_freq_ = diag_freq;
 
       using namespace diagnostic_updater;
-      diag_topic_.reset(new TopicDiagnostic("zvision_lidar_packets", diagnostics_,
+      if(pub_cfg_srv_)
+        diag_topic_.reset(new TopicDiagnostic("zvision_lidar_packets", *(diagnostics_.get()),
                                             FrequencyStatusParam(&diag_min_freq_, &diag_max_freq_, 0.1, 10),
                                             TimeStampStatusParam()));
 
@@ -210,13 +217,15 @@ zvisionLidarDriver::zvisionLidarDriver(ros::NodeHandle node, ros::NodeHandle pri
         srv_->setCallback(std::bind(&zvisionLidarDriver::callback, this, std::placeholders::_1, std::placeholders::_2));
       }
       // initialize diagnostics
-      diagnostics_.setHardwareID(deviceName);
+      if(pub_cfg_srv_)
+        diagnostics_->setHardwareID(deviceName);
       const double diag_freq = packet_rate_MLXA1 / config_.npackets;
       diag_max_freq_ = diag_freq;
       diag_min_freq_ = diag_freq;
 
       using namespace diagnostic_updater;
-      diag_topic_.reset(new TopicDiagnostic("zvision_lidar_packets", diagnostics_,
+      if(pub_cfg_srv_)
+        diag_topic_.reset(new TopicDiagnostic("zvision_lidar_packets", *(diagnostics_.get()),
                                             FrequencyStatusParam(&diag_min_freq_, &diag_max_freq_, 0.1, 10),
                                             TimeStampStatusParam()));
 
@@ -252,13 +261,15 @@ zvisionLidarDriver::zvisionLidarDriver(ros::NodeHandle node, ros::NodeHandle pri
         srv_->setCallback(std::bind(&zvisionLidarDriver::callback, this, std::placeholders::_1, std::placeholders::_2));
       }
       // initialize diagnostics
-      diagnostics_.setHardwareID(deviceName);
+      if(pub_cfg_srv_)
+        diagnostics_->setHardwareID(deviceName);
       const double diag_freq = packet_rate_MLXS / config_.npackets;
       diag_max_freq_ = diag_freq;
       diag_min_freq_ = diag_freq;
 
       using namespace diagnostic_updater;
-      diag_topic_.reset(new TopicDiagnostic("zvision_lidar_packets", diagnostics_,
+      if(pub_cfg_srv_)
+        diag_topic_.reset(new TopicDiagnostic("zvision_lidar_packets", *(diagnostics_.get()),
                                             FrequencyStatusParam(&diag_min_freq_, &diag_max_freq_, 0.1, 10),
                                             TimeStampStatusParam()));
 
@@ -334,9 +345,10 @@ bool zvisionLidarDriver::poll(void)
   output_.publish(scan);
  
   // notify diagnostics that a message has been published, updating its status
-  diag_topic_->tick(scan->header.stamp);
-  diagnostics_.update();
-
+  if(pub_cfg_srv_){
+    diag_topic_->tick(scan->header.stamp);
+    diagnostics_->update();
+  }
   return true;
 }
 

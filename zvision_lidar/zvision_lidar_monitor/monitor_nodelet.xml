@@ -1,0 +1,9 @@
+<library path="lib/libzvision_lidar_monitor_nodelet">
+  <class name="zvision_lidar_driver/MonitorNodelet"
+         type="zvision_lidar_driver::MonitorNodelet"
+         base_class_type="nodelet::Nodelet">
+    <description> 
+      Publish zvision lidar heartbeat data.
+    </description>
+  </class>
+</library>

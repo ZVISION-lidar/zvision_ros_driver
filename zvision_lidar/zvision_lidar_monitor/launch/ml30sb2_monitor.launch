@@ -1,0 +1,17 @@
+<launch>
+  <arg name="manager" default="zvision_lidar_nodelet_manager" />
+  <arg name="model" default="ML30SB2" />
+  <arg name="udp_port" default="55000" />
+  <arg name="publish_msg" default="true" />
+  
+  <node pkg="nodelet" type="nodelet" name="$(arg manager)" args="manager" output="screen"/>
+
+  <node pkg="nodelet" type="nodelet" name="$(arg manager)_monitor"
+        args="load zvision_lidar_driver/MonitorNodelet $(arg manager)" output="screen">
+    <param name="model" value="$(arg model)"/>
+    <param name="udp_port" value="$(arg udp_port)" />
+    <param name="publish_msg" value="$(arg publish_msg)" />
+   </node>
+
+
+</launch>

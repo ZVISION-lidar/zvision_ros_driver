@@ -105,6 +105,13 @@ namespace zvision {
         {
             total_packet = 400;
             data_size = (6400 * 8 * 2);
+            uint8_t downsample_flg = *((char *)cal_recv.c_str() + 13);
+            if(downsample_flg == 1){
+                total_packet = 200;
+            }else if(downsample_flg == 2){
+                 total_packet = 100;
+            }
+            data_size = (total_packet * 16 * 8 * 2);
             cal.model = ML30SA1;
         }
         else if (0 == dev_code.compare("30S_B1"))
@@ -292,33 +299,26 @@ namespace zvision {
                     }
                     cal.model = MLXA1;
                 }
-                #if 0
                 else if (("ML30S_160_1_2" == mode_str) || ("ML30S_160_1_4" == mode_str))
                 {
                     int group = 3200;
-                    if ("ML30S_160_1_2" == mode_str)
-                    {
-                        group = 3200;
-                        cal.scan_mode = ScanMode::ScanML30SA1_160_1_2;
-                    }
-                    else
+                    if ("ML30S_160_1_4" == mode_str)
                     {
                         group = 1600;
-                        cal.scan_mode = ScanMode::ScanML30SA1_160_1_4;
                     }
 
-                    if ((lines.size() - curr) < group)//check the file lines
+                    if ((lines.size() - curr) < group)
                         return -1;
 
                     cal.data.resize(group * 8 * 2);
                     for (int i = 0; i < group; i++)
                     {
                         const int column = 17;
-
                         std::vector<std::string>& datas = lines[i + curr];
                         if (datas.size() != column)
                         {
-                            ret = InvalidContent;
+                            ret = -1;
+                            ROS_ERROR_STREAM("Resolve calibration file data error.");
                             break;
                         }
                         for (int j = 1; j < column; j++)
@@ -326,16 +326,8 @@ namespace zvision {
                             cal.data[i * 16 + j - 1] = static_cast<float>(std::atof(datas[j].c_str()));
                         }
                     }
-                    cal.device_type = DeviceType::LidarML30SA1;
-                    cal.description = "";
-                    for (int i = 0; i < curr; i++)
-                    {
-                        for (int j = 0; j < lines[i].size(); j++)
-                            cal.description += lines[i][j];
-                        cal.description += "\n";
-                    }
+                   cal.model = ML30SA1;
                 }
-                #endif
                 else if ("MLXs_180" == mode_str)
                 {
                     if ((lines.size() - curr) < 36000)//check the file lines

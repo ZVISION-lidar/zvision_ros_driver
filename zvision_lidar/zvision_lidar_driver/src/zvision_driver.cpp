@@ -22,6 +22,7 @@ zvisionLidarDriver::zvisionLidarDriver(ros::NodeHandle node, ros::NodeHandle pri
 
   // use private node handle to get parameters
   private_nh.param("frame_id", config_.frame_id, std::string("zvision_lidar"));
+  private_nh.param("time_offset", config_.time_offset, 0.0);
 
   std::string tf_prefix = tf::getPrefixParam(private_nh);
   ROS_DEBUG_STREAM("tf_prefix: " << tf_prefix);
@@ -112,10 +113,6 @@ zvisionLidarDriver::zvisionLidarDriver(ros::NodeHandle node, ros::NodeHandle pri
   }
   else if(config_.model == "ML30SA1"){
 
-	  int npackets = 160;
-	  private_nh.param("npackets", config_.npackets, npackets);
-	  ROS_INFO_STREAM("publishing " << config_.npackets << " packets per scan");
-
 	  std::string dump_file;
 	  private_nh.param("pcap", dump_file, std::string(""));
 
@@ -154,6 +151,25 @@ zvisionLidarDriver::zvisionLidarDriver(ros::NodeHandle node, ros::NodeHandle pri
 	  }
 	  // raw packet output topic
 	  output_ = node.advertise<zvision_lidar_msgs::zvisionLidarScan>("zvision_lidar_packets", 20);
+
+    // get downsample mode
+ 	  int npackets = 160;
+    zvision_lidar_msgs::zvisionLidarScanPtr scan(new zvision_lidar_msgs::zvisionLidarScan);
+    scan->packets.resize(1);
+    int ret = input_->getPacket(&scan->packets[0], config_.time_offset);
+    if(ret == 0){
+      uint8_t ds_m = scan->packets[0].data[1302] &0x0F;
+      uint8_t tp = scan->packets[0].data[1303];
+      if(tp == 0x80){
+        if(ds_m == 1) npackets = 80;
+        else if(ds_m == 2)  npackets = 40;
+      }
+    }
+    else{
+      ROS_ERROR("get downsample mode failed.");
+    }
+	  private_nh.param("npackets", config_.npackets, npackets);
+	  ROS_INFO_STREAM("publishing " << config_.npackets << " packets per scan");
   }
   else if(config_.model == "MLX"){
       int npackets = 400;

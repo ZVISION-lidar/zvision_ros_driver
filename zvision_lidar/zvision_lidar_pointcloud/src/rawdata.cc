@@ -156,6 +156,19 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
 
   if(device_type_ == zvision::ML30SA1)
   {
+        pcl::PointXYZI p_invalid;
+        p_invalid.x = std::numeric_limits<float>::quiet_NaN();
+        p_invalid.y = std::numeric_limits<float>::quiet_NaN();
+        p_invalid.z = std::numeric_limits<float>::quiet_NaN();
+        p_invalid.intensity = 0;
+        // check cal
+        if(cal_lut_->data.size() != pointcloud->size()){
+            for(int i = 0;i<pointcloud->size();i++){
+                pointcloud->at(i) = p_invalid;
+            }
+            return;
+        }
+
     uint8_t fov_id[POINT_PER_GROUP] = {0,6,1,7,2,4,3,5};
     // firing interval
     float firing_interval_us = .0f;//0.00000078125f = 40 * 0.001/51200;
@@ -182,11 +195,6 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
 
 			  disTemp = (((Dis_High << 8) + Dis_Low) << 3) + (int)((Int_High & 0xE0) >> 5);
               if(disTemp == 0x0){
-                pcl::PointXYZI p_invalid;
-                p_invalid.x = std::numeric_limits<float>::quiet_NaN();
-                p_invalid.y = std::numeric_limits<float>::quiet_NaN();
-                p_invalid.z = std::numeric_limits<float>::quiet_NaN();
-                p_invalid.intensity = 0;
                 pointcloud->at(point_num) = p_invalid;
                 continue;  
               }

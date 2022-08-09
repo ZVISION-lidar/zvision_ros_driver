@@ -207,6 +207,14 @@ void Convert::processScan(const zvision_lidar_msgs::zvisionLidarScan::ConstPtr& 
   if(device_type_ == zvision::ML30SA1){
 	  outPoints->height = 1;
 	  outPoints->width = 51200;/*51200 points per scan*/
+    // for downsample mode
+      if(scanMsg->packets.size() == 80){
+          outPoints->width = 25600;
+          downsample_type_ = DownsampleType::None;
+      }else if(scanMsg->packets.size() == 40){
+          outPoints->width = 12800;
+          downsample_type_ = DownsampleType::None;
+      }
 	  outPoints->is_dense = false;
 	  outPoints->resize(outPoints->height * outPoints->width);
   }
@@ -254,7 +262,7 @@ void Convert::processScan(const zvision_lidar_msgs::zvisionLidarScan::ConstPtr& 
   pcl::PointCloud<pcl::PointXYZI>::Ptr  outputPtr(new pcl::PointCloud<pcl::PointXYZI>);
   outputPtr->resize(outPoints->size());
   outputPtr->header = outPoints->header;
-  if(nearest_table_ == nullptr && data_->cal_init_ok_){
+  if(nearest_table_ == nullptr && data_->cal_init_ok_ &&(outPoints->size() == 108000 || outPoints->size() == 51200)){
     nearest_table_ = get_nearest_point_index();
   }
   if(use_outlier_removal_ && nearest_table_ != nullptr){

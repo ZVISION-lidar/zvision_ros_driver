@@ -56,6 +56,8 @@ void RawData::loadConfigFile(ros::NodeHandle node, ros::NodeHandle private_nh)
       device_type_ = zvision::ML30B1;
   else if(model == std::string("ML30SA1"))
       device_type_ = zvision::ML30SA1;
+  else if(model == std::string("ML30S+A1"))
+      device_type_ = zvision::ML30SPlusA1;
   else if(model == std::string("MLX"))
       device_type_ = zvision::MLX;
   else if(model == std::string("MLXA1"))
@@ -153,7 +155,6 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
   int udp_seq = 0;
   udp_seq = (int)(data[3]) + ((data[2] & 0xF) << 8);
 
-
   if(device_type_ == zvision::ML30SA1)
   {
         pcl::PointXYZI p_invalid;
@@ -200,6 +201,108 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
               }
 			  double distantce_real_live = disTemp * 0.0015;/*distance from udp*/
 			  intensity = (((Int_High & 0x1F) << 8) + (Int_Low));/*reflectivity from udp*/
+              intensity = intensity & 0x3FF;
+
+              zvision::PointCalibrationData& cal = this->cal_lut_->data[point_num];
+              point.x = distantce_real_live * cal.cos_ele * cal.sin_azi;/*x*/
+              point.y = distantce_real_live * cal.cos_ele * cal.cos_azi;/*y*/
+              point.z = distantce_real_live * cal.sin_ele;/*z*/
+              point.intensity = intensity;
+
+			  /*apply transform*/
+			  double Ax = x_rotation;
+			  double Ay = y_rotation;
+			  double Az = z_rotation;
+			  double x, y, z;
+			  pcl::PointXYZI sourPoint   = point;
+			  pcl::PointXYZI xTransPoint = point;
+			  pcl::PointXYZI yTransPoint = point;
+			  pcl::PointXYZI zTransPoint = point;
+
+			  x = sourPoint.x;/*X rotation*/
+			  y = sourPoint.y;
+			  z = sourPoint.z;
+			  xTransPoint.x = x;
+
+			  xTransPoint.y = y * std::cos(Ax) - z * std::sin(Ax);
+			  xTransPoint.z = y * std::sin(Ax) + z * std::cos(Ax);
+
+			  x = xTransPoint.x;/*Y rotation*/
+			  y = xTransPoint.y;
+			  z = xTransPoint.z;
+
+			  yTransPoint.x = x * std::cos(Ay) + z * std::sin(Ay);
+			  yTransPoint.y = y;
+			  yTransPoint.z = x * (-std::sin(Ay)) + z * std::cos(Ay);
+
+			  x = yTransPoint.x;/*Z rotation*/
+			  y = yTransPoint.y;
+			  z = yTransPoint.z;
+
+			  zTransPoint.x = x * std::cos(Az) + y * (-std::sin(Az));
+			  zTransPoint.y = x * std::sin(Az) + y * std::cos(Az);
+			  zTransPoint.z = z;
+
+			  point.x = zTransPoint.x + x_trans;
+			  point.y = zTransPoint.y + y_trans;
+			  point.z = zTransPoint.z + z_trans;
+
+              pointcloud->at(point_num) = point;/*not filled when pkt loss*/
+		  }
+	  }
+  }
+  else if(device_type_ == zvision::ML30SPlusA1)
+   {
+      pcl::PointXYZI p_invalid;
+      p_invalid.x = std::numeric_limits<float>::quiet_NaN();
+      p_invalid.y = std::numeric_limits<float>::quiet_NaN();
+      p_invalid.z = std::numeric_limits<float>::quiet_NaN();
+      p_invalid.intensity = 0;
+      // check cal
+      if(cal_lut_->data.size() != pointcloud->size()){
+        for(int i = 0;i<pointcloud->size();i++){
+          pointcloud->at(i) = p_invalid;
+        }
+        return;
+      }
+
+      int udp_id = pointcloud->size() / POINT_PER_GROUP_ML30SPlus_A1 / GROUP_PER_PACKET_ML30;
+      uint8_t fov_id_up[POINT_PER_GROUP_ML30SPlus_A1] ={0,1,2,3};
+      uint8_t fov_id_down[POINT_PER_GROUP_ML30SPlus_A1] ={4,5,6,7};
+      uint8_t* fov_id = fov_id_down;
+      if(udp_seq < (udp_id/2)){
+        fov_id = fov_id_up;
+      }
+      // firing interval
+      float firing_interval_us = .0f;
+	  for (int group = 0; group < GROUP_PER_PACKET_ML30; group++)
+	  {
+		  const unsigned char *pc = data + 4 + group * POINT_PER_GROUP_ML30SPlus_A1 * 4;
+          int group_index = udp_seq * GROUP_PER_PACKET_ML30 * POINT_PER_GROUP_ML30SPlus_A1 + \
+                                               group * POINT_PER_GROUP_ML30SPlus_A1;
+
+          for (int laser_id = 0; laser_id < POINT_PER_GROUP_ML30SPlus_A1; laser_id++)
+		  {
+              int point_num = group_index + laser_id;
+              int disTemp = 0;
+              if(point_num >= 51200) continue;
+
+              fovs[point_num] = fov_id[laser_id];
+              stamps[point_num] = stamp_pkt + firing_interval_us * (group * POINT_PER_GROUP_ML30SPlus_A1 + laser_id) ;
+
+			  //dis_high
+			  unsigned char Dis_High = (u_char)(pc[0 + 4 * laser_id]);
+			  unsigned char Dis_Low  = (u_char)(pc[1 + 4 * laser_id]);
+			  unsigned char Int_High = (u_char)(pc[2 + 4 * laser_id]);
+			  unsigned char Int_Low  = (u_char)(pc[3 + 4 * laser_id]);
+
+			  disTemp = (((Dis_High << 8) + Dis_Low) << 3) + (int)((Int_High & 0xE0) >> 5);
+              if(disTemp == 0x0){
+                pointcloud->at(point_num) = p_invalid;
+                continue;
+              }
+			  double distantce_real_live = disTemp * 0.0015;
+			  intensity = (((Int_High & 0x1F) << 8) + (Int_Low));
               intensity = intensity & 0x3FF;
 
               zvision::PointCalibrationData& cal = this->cal_lut_->data[point_num];
@@ -649,7 +752,7 @@ void RawData::PollCalibrationData(void) {
         break;
     zvision::CalibrationData cal;
     int ret = 0;
-    if(0 != (ret = zvision::LidarTools::GetOnlineCalibrationData( this->dev_ip_, cal)))
+    if(0 != (ret = zvision::LidarTools::GetOnlineCalibrationData( this->dev_ip_, cal, this->device_type_)))
         ROS_WARN("Unable to get online calibration from %s.", this->dev_ip_.c_str());
     else {
         zvision::LidarTools::ComputeCalibrationData(cal, *(cal_lut_.get()));

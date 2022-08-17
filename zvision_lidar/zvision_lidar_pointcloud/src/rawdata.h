@@ -62,6 +62,7 @@ static const int GROUP_PER_PACKET_MLXS = 80;
 static const int GROUP_PER_PACKET = 40;
 static const int POINT_PER_GROUP_ML30 = 3;
 static const int POINT_PER_GROUP = 8;
+static const int POINT_PER_GROUP_ML30SPlus_A1 = 4;
 static const int POINT_PER_GROUP_MLX = 3;
 static const int POINT_PER_GROUP_MLXS = 3;
 static const int MAX_POINTS = 204800;

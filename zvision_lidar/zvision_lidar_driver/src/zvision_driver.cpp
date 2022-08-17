@@ -37,6 +37,7 @@ zvisionLidarDriver::zvisionLidarDriver(ros::NodeHandle node, ros::NodeHandle pri
   private_nh.param("frequency", fre, 10);
   double packet_rate_ML30 = 125 * fre;
   double packet_rate_ML30S_A1 = 160 * fre;
+  double packet_rate_ML30SPlus_A1 = 160 * fre;
   double packet_rate_MLX = 400 * fre;
   double packet_rate_MLXA1 = 475 * fre;
   double packet_rate_MLXS = 450 * fre;
@@ -49,6 +50,9 @@ zvisionLidarDriver::zvisionLidarDriver(ros::NodeHandle node, ros::NodeHandle pri
   }
   else if(config_.model == "ML30SA1"){
     model_full_name = "ZVISION-LiDAR-ML30SA1";
+  }
+  else if(config_.model == "ML30S+A1"){
+    model_full_name = "ZVISION-LiDAR-ML30S+A1";
   }
   else if(config_.model == "MLX"){
     model_full_name = "ZVISION-LiDAR-MLX";
@@ -125,18 +129,6 @@ zvisionLidarDriver::zvisionLidarDriver(ros::NodeHandle node, ros::NodeHandle pri
       // Set callback function und call initially
 	    srv_->setCallback(std::bind(&zvisionLidarDriver::callback, this, std::placeholders::_1, std::placeholders::_2));
     }
-	  // initialize diagnostics
-    if(pub_cfg_srv_)
-	    diagnostics_->setHardwareID(deviceName);
-    const double diag_freq = packet_rate_ML30S_A1 / config_.npackets;
-	  diag_max_freq_ = diag_freq;
-	  diag_min_freq_ = diag_freq;
-
-	  using namespace diagnostic_updater;
-    if(pub_cfg_srv_)
-	    diag_topic_.reset(new TopicDiagnostic("zvision_lidar_packets", *(diagnostics_.get()),
-	                                        FrequencyStatusParam(&diag_min_freq_, &diag_max_freq_, 0.1, 10),
-	                                        TimeStampStatusParam()));
 
 	  // open zvision lidar input device or file
 	  if (dump_file != "")  // have PCAP file?
@@ -170,6 +162,60 @@ zvisionLidarDriver::zvisionLidarDriver(ros::NodeHandle node, ros::NodeHandle pri
     }
 	  private_nh.param("npackets", config_.npackets, npackets);
 	  ROS_INFO_STREAM("publishing " << config_.npackets << " packets per scan");
+
+    // initialize diagnostics
+    if(pub_cfg_srv_)
+	    diagnostics_->setHardwareID(deviceName);
+    const double diag_freq = packet_rate_ML30S_A1 / config_.npackets;
+	  diag_max_freq_ = diag_freq;
+	  diag_min_freq_ = diag_freq;
+
+	  using namespace diagnostic_updater;
+    if(pub_cfg_srv_)
+	    diag_topic_.reset(new TopicDiagnostic("zvision_lidar_packets", *(diagnostics_.get()),
+	                                        FrequencyStatusParam(&diag_min_freq_, &diag_max_freq_, 0.1, 10),
+	                                        TimeStampStatusParam()));
+  }
+  else if(config_.model == "ML30S+A1"){
+    std::string dump_file;
+	  private_nh.param("pcap", dump_file, std::string(""));
+
+	  int port_to_recv_udppkt;
+	  private_nh.param("udp_port", port_to_recv_udppkt, (int)UDP_DATA_PORT_NUMBER);
+    if(pub_cfg_srv_){
+	    srv_ = /**/std::make_shared<dynamic_reconfigure::Server<zvision_lidar_driver::zvisionLidarNodeConfig> >(private_nh);
+	    srv_->setCallback(std::bind(&zvisionLidarDriver::callback, this, std::placeholders::_1, std::placeholders::_2));
+    }
+    int npackets = 160;
+	  private_nh.param("npackets", config_.npackets, npackets);
+	  ROS_INFO_STREAM("publishing " << config_.npackets << " packets per scan");
+
+    // initialize diagnostics
+    if(pub_cfg_srv_)
+	    diagnostics_->setHardwareID(deviceName);
+    const double diag_freq = packet_rate_ML30SPlus_A1 / config_.npackets;
+	  diag_max_freq_ = diag_freq;
+	  diag_min_freq_ = diag_freq;
+
+	  using namespace diagnostic_updater;
+    if(pub_cfg_srv_)
+	    diag_topic_.reset(new TopicDiagnostic("zvision_lidar_packets", *(diagnostics_.get()),
+	                                        FrequencyStatusParam(&diag_min_freq_, &diag_max_freq_, 0.1, 10),
+	                                        TimeStampStatusParam()));
+
+	  // open zvision lidar input device or file
+	  if (dump_file != "")  // have PCAP file?
+	  {
+		  // read data from packet capture file
+		  input_.reset(new zvision_lidar_driver::InputPCAP(private_nh, port_to_recv_udppkt, packet_rate_ML30SPlus_A1, dump_file));
+	  }
+	  else
+	  {
+		  // read data from live socket
+		  input_.reset(new zvision_lidar_driver::InputSocket(private_nh, port_to_recv_udppkt));
+	  }
+	  // raw packet output topic
+	  output_ = node.advertise<zvision_lidar_msgs::zvisionLidarScan>("zvision_lidar_packets", 20);
   }
   else if(config_.model == "MLX"){
       int npackets = 400;
@@ -362,8 +408,10 @@ bool zvisionLidarDriver::poll(void)
  
   // notify diagnostics that a message has been published, updating its status
   if(pub_cfg_srv_){
-    diag_topic_->tick(scan->header.stamp);
-    diagnostics_->update();
+    if(diag_topic_)
+        diag_topic_->tick(scan->header.stamp);
+    if(diagnostics_)
+        diagnostics_->update();
   }
   return true;
 }

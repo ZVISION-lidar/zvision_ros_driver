@@ -37,7 +37,7 @@ namespace zvision {
         return (0x00 == ret[2]) && (0x00 == ret[3]);
     }
 
-    int LidarTools::GetOnlineCalibrationData(std::string ip, CalibrationData& cal)
+    int LidarTools::GetOnlineCalibrationData(std::string ip, CalibrationData& cal, LidarType tp)
     {
         //std::string ec;
         //const int ppf = 256000; // points per frame, 256000 reserved
@@ -47,6 +47,13 @@ namespace zvision {
         //std::unique_ptr<unsigned char> packet_data(new unsigned char[packet_buffer_size]);
         const int send_len = 4;
         char cal_cmd[send_len] = { (char)0xBA, (char)0x07, (char)0x00, (char)0x00 };
+
+        // change cmd
+        if(tp == LidarType::ML30SPlusA1){
+            cal_cmd[1] = (char)0x0D;
+            cal_cmd[2] = (char)0x0A;
+        }
+
         std::string cmd(cal_cmd, send_len);
 
         const int recv_len = 4;
@@ -104,7 +111,7 @@ namespace zvision {
         else if (0 == dev_code.compare("30S_A1"))
         {
             total_packet = 400;
-            data_size = (6400 * 8 * 2);
+            //data_size = (6400 * 8 * 2);
             uint8_t downsample_flg = *((char *)cal_recv.c_str() + 13);
             if(downsample_flg == 1){
                 total_packet = 200;
@@ -113,6 +120,19 @@ namespace zvision {
             }
             data_size = (total_packet * 16 * 8 * 2);
             cal.model = ML30SA1;
+        }
+        else if (0 == dev_code.compare("30S+A1"))
+        {
+            total_packet = 400;
+            //data_size = (6400 * 8 * 2);
+            //uint8_t downsample_flg = *((char *)cal_recv.c_str() + 13);
+            //if(downsample_flg == 1){
+            //   total_packet = 200;
+            //}else if(downsample_flg == 2){
+            //     total_packet = 100;
+            //}
+            data_size = (total_packet * 16 * 8 * 2);
+            cal.model = ML30SPlusA1;
         }
         else if (0 == dev_code.compare("30S_B1"))
         {
@@ -192,6 +212,25 @@ namespace zvision {
                 }
             }
         }
+
+        // now we reorder the cali.data   0~15... -> 0~7... + 8~15...
+		if (cal.model == ML30SPlusA1) {
+			std::vector<float> dst;
+			dst.resize(data.size(),.0f);
+			int id_h = 0;
+			int id_l = data.size() / 2;
+			for (int i = 0; i < data.size(); i++) {
+				if (i / 8 % 2 == 0) {
+					dst.at(id_h) = data[i];
+					id_h++;
+				}
+				else {
+					dst.at(id_l) = data[i];
+					id_l++;
+				}
+			}
+			data = dst;
+		}
 
         if (client.SyncRecv(recv, recv_len))
         {
@@ -327,6 +366,34 @@ namespace zvision {
                         }
                     }
                    cal.model = ML30SA1;
+                }
+                else if("ML30SPlus_160" == mode_str ){
+                    int group = 6400;
+                    cal.model = ML30SPlusA1;
+                    if ((lines.size() - curr) < group)
+                        return -1;
+
+                    cal.data.resize(group * 8 * 2);
+                    const int column = 17;
+                    const int lpos = cal.data.size() / 2;
+                    for (int i = 0; i < group; i++)
+                    {
+                        std::vector<std::string>& datas = lines[i+curr];
+                        if (datas.size() != column)
+                        {
+                            ret = -1;
+                            break;
+                        }
+
+                        // for line with fov0 fov1 fov2 fov3 fov4 fov5 fov6 fov7
+                        for (int j = 1; j < column; j++)
+                        {
+                            if (j <= column / 2) // for H view
+                                cal.data[i * 8 + j - 1] = static_cast<float>(std::atof(datas[j].c_str()));
+                            else // for L view
+                                cal.data[i * 8 + j - 1 - column / 2 + lpos] = static_cast<float>(std::atof(datas[j].c_str()));
+                        }
+                    }
                 }
                 else if ("MLXs_180" == mode_str)
                 {
@@ -514,6 +581,27 @@ namespace zvision {
                 point_cal.sin_azi = std::sin(azi);
             }
         }
+        else if(ML30SPlusA1 == cal.model){
+            const int start = 4;
+			int fov_index[start] = { 0, 1, 2, 3 };
+			for (unsigned int i = 0; i < cal.data.size() / 2; ++i)
+			{
+				int start_number = i % start;
+				int group_number = i / start;
+				int point_numer = group_number * start + fov_index[start_number];
+				float azi = static_cast<float>(cal.data[point_numer * 2] / 180.0 * 3.1416);
+				float ele = static_cast<float>(cal.data[point_numer * 2 + 1] / 180.0 * 3.1416);
+
+				PointCalibrationData& point_cal = cal_lut.data[i];
+				point_cal.cos_ele = std::cos(ele);
+				point_cal.sin_ele = std::sin(ele);
+				point_cal.cos_azi = std::cos(azi);
+				point_cal.sin_azi = std::sin(azi);
+				point_cal.azi = azi;
+				point_cal.ele = ele;
+			}
+
+        }
         else if (MLX == cal.model)
         {
             const int start = 3;
@@ -573,6 +661,9 @@ namespace zvision {
         case ML30SA1:
             dev_string = "ML30SA1";
             break;
+        case ML30SPlusA1:
+            dev_string = "ML30S+A1";
+            break;
         case MLX:
             dev_string = "MLX";
             break;
@@ -595,6 +686,8 @@ namespace zvision {
             dev_ty = LidarType::ML30B1;
         else if(tp == "ML30SA1")
             dev_ty = LidarType::ML30SA1;
+        else if(tp == "ML30S+A1")
+            dev_ty = LidarType::ML30SPlusA1;
         else if(tp == "MLX")
             dev_ty = LidarType::MLX;
         else if(tp == "MLXA1")
@@ -613,6 +706,8 @@ namespace zvision {
         if(LidarType::ML30B1 == cal_lut.model)
             fovs = 3;
         else if(LidarType::ML30SA1 == cal_lut.model)
+            fovs = 8;
+        else if(LidarType::ML30SPlusA1 == cal_lut.model)
             fovs = 8;
         else if(LidarType::MLX == cal_lut.model)
             fovs = 3;

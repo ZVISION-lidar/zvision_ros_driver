@@ -66,11 +66,11 @@ private:
   ros::Publisher output_;
   // Converter convtor_;
   /** diagnostics updater */
-  std::shared_ptr<diagnostic_updater::Updater> diagnostics_;
+  std::shared_ptr<diagnostic_updater::Updater> diagnostics_ = nullptr;
   //diagnostic_updater::Updater diagnostics_;
   double diag_min_freq_;
   double diag_max_freq_;
-  /**/std::shared_ptr<diagnostic_updater::TopicDiagnostic> diag_topic_;//diagnose_topic
+  /**/std::shared_ptr<diagnostic_updater::TopicDiagnostic> diag_topic_ = nullptr;//diagnose_topic
 };
 
 }  // namespace zvision_lidar_driver

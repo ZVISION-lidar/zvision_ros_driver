@@ -25,6 +25,7 @@ namespace zvision {
     typedef enum LidarType{
         ML30B1,
         ML30SA1,
+        ML30SPlusA1,
         MLX,
         MLXA1,
         MLXS,
@@ -56,7 +57,7 @@ namespace zvision {
     class LidarTools{
         public:
             static bool CheckDeviceRet(std::string ret);
-            static int GetOnlineCalibrationData(std::string ip, CalibrationData& cal);
+            static int GetOnlineCalibrationData(std::string ip, CalibrationData& cal, LidarType tp = LidarType::ML30SA1);
             static int ReadCalibrationFile(std::string filename, CalibrationData& cal);
             static void ComputeCalibrationData(CalibrationData& cal, PointCalibrationTable& cal_lut);
             static std::string GetDeviceTypeString(LidarType tp);

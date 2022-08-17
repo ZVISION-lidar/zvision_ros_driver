@@ -1,6 +1,6 @@
 <launch>
   <arg name="manager" default="zvision_lidar_nodelet_manager" />
-  <arg name="model" default="ML30SA1" />
+  <arg name="model" default="ML30S+A1" />
   <arg name="device_ip" default="192.168.10.108" />
   <arg name="udp_port" default="2368" />
   <arg name="angle_path" default="" />
@@ -9,10 +9,12 @@
   <arg name="use_blue_gold_color_scheme" default="false" />
   <arg name="publisher_pointcloud_type_xyzirt" default="false" />
   <arg name="dynamic_reconfigure_server" default="false" />
+  <!-- start nodelet manager -->
+  <node pkg="nodelet" type="nodelet" name="$(arg manager)" args="manager" output="screen"/>
 
   <!-- load driver nodelet into it (udp packets)-->
-  <node pkg="zvision_lidar_driver" type="zvision_lidar_node" name="zvision_lidar_node_driver"
-      output="screen">
+  <node pkg="nodelet" type="nodelet" name="$(arg manager)_driver"
+        args="load zvision_lidar_driver/DriverNodelet $(arg manager)" output="screen">
     <param name="model" value="$(arg model)"/>
     <param name="device_ip" value="$(arg device_ip)" />
     <param name="udp_port" value="$(arg udp_port)" />
@@ -21,8 +23,8 @@
   </node>
 
   <!-- load driver nodelet into it (udp packet to pointcloud)-->
-  <node pkg="zvision_lidar_pointcloud" type="zvision_lidar_cloud_node" name="zvision_lidar_cloud_node_cloud"
-      output="screen">
+  <node pkg="nodelet" type="nodelet" name="$(arg manager)_cloud"
+        args="load zvision_lidar_pointcloud/CloudNodelet $(arg manager)" output="screen">
     <param name="model" value="$(arg model)"/>
     <param name="angle_path" value="$(arg angle_path)" />
     <param name="device_ip" value="$(arg device_ip)" />

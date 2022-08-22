@@ -5,7 +5,10 @@
   <arg name="udp_port" default="2368" />
   <arg name="angle_path" default="$(find zvision_lidar_pointcloud)/data/ML30S_A1_Default.cal" />
   <arg name="pcap" default="$(find zvision_lidar_pointcloud)/data/ML30S_A1_Default.pcap" />
+  <arg name="publisher_pointcloud_type_xyzi" default="false" />
   <arg name="use_blue_gold_color_scheme" default="false" />
+  <arg name="publisher_pointcloud_type_xyzirt" default="true" />
+  <arg name="use_lidar_line_id" default="false" />
   <!-- start nodelet manager -->
   <node pkg="nodelet" type="nodelet" name="$(arg manager)" args="manager" output="screen"/>
 
@@ -34,10 +37,20 @@
     <param name="use_outlier_removal" value="false"/>
     <param name="outlier_th" value="0.05"/>
     <param name="use_blue_gold_color_scheme" value="$(arg use_blue_gold_color_scheme)"/>
+    <param name="publisher_pointcloud_type_xyzi" value="$(arg publisher_pointcloud_type_xyzi)" />
+    <param name="publisher_pointcloud_type_xyzirt" value="$(arg publisher_pointcloud_type_xyzirt)" />
+    <!-- <param name="downsample_type" value="downsample_voxel" /> -->
+    <!-- <param name="downsample_type" value="downsample_line" /> -->
+    <!-- <param name="downsample_type" value="downsample_cfg_file" /> -->
+    <!-- <param name="downsample_type" value="none" /> -->
+    <param name="downsample_cfg_path" value="$(find zvision_lidar_pointcloud)/data/Downsample_ML30S_A1_1_2.txt" />
+   <param name="use_lidar_line_id" value="$(arg use_lidar_line_id)" />
   </node>
   
-  
   <node if="$(arg use_blue_gold_color_scheme)" name="rviz" pkg="rviz" type="rviz"  args="-d $(find zvision_lidar_pointcloud)/rviz_cfg/zvision_lidar_colored.rviz" />
-  <node unless="$(arg use_blue_gold_color_scheme)" name="rviz" pkg="rviz" type="rviz"  args="-d $(find zvision_lidar_pointcloud)/rviz_cfg/zvision_lidar.rviz" />
+  <group unless="$(arg use_blue_gold_color_scheme)">
+    <node if="$(arg publisher_pointcloud_type_xyzirt)" name="rviz" pkg="rviz" type="rviz"  args="-d $(find zvision_lidar_pointcloud)/rviz_cfg/zvision_lidar_xyzirt.rviz" />
+    <node unless="$(arg publisher_pointcloud_type_xyzirt)" name="rviz" pkg="rviz" type="rviz"  args="-d $(find zvision_lidar_pointcloud)/rviz_cfg/zvision_lidar.rviz" />
+  </group>
 
 </launch>

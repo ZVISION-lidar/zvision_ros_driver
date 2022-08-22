@@ -14,6 +14,7 @@
     This class converts raw ZVISION 3D LIDAR packets to PointCloud2.
 
 */
+#include <fstream>
 #include "convert.h"
 #include "tools/tools.h"
 #include <pcl_conversions/pcl_conversions.h>
@@ -130,6 +131,16 @@ Convert::Convert(ros::NodeHandle node, ros::NodeHandle private_nh) : data_(new z
       this->downsample_type_ = DownsampleType::Voxel;
       ROS_INFO("Downsample type is [Voxel], leaf size is [%.3f].", leaf_size_);
   }
+  else if(downsample_string == "downsample_cfg_file"){
+    std::string cfg_path;
+    private_nh.param("downsample_cfg_path", cfg_path, std::string(""));
+    if(!cfg_path.empty()){
+      ROS_INFO("Downsample type is [ConfigFile].");
+      ROS_INFO("downsample_cfg_path : [%s].", cfg_path.c_str());
+      getDownSampleMaskFromFile(cfg_path);
+      this->downsample_type_ = DownsampleType::ConfigFile;
+    }
+  }
   else
   {
       this->downsample_type_ = DownsampleType::None;
@@ -184,7 +195,6 @@ void Convert::callback(zvision_lidar_pointcloud::CloudNodeConfig& config, uint32
   data_->z_rotation = config.z_rotation / 180.0 * M_PI;
   // config_.time_offset = config.time_offset;
 }
-
 
 /** @brief Callback for raw scan messages. *///IMPORTANT
 void Convert::processScan(const zvision_lidar_msgs::zvisionLidarScan::ConstPtr& scanMsg)
@@ -256,14 +266,20 @@ void Convert::processScan(const zvision_lidar_msgs::zvisionLidarScan::ConstPtr& 
       outPoints->header.stamp = time_from_pkt_s * 1000000 + time_from_pkt_us;
   }
 
-  // parse packets
-  std::vector<int> fov_points(outPoints->size(),0);
-  std::vector<double> stamp_points(outPoints->size(),1.0f * outPoints->header.stamp / 1000000);
+  // parsing packets
+  pcl::PointCloud<ZvPointXYZIRT>::Ptr points_xyzirt(new pcl::PointCloud<ZvPointXYZIRT>);
+  points_xyzirt->resize(outPoints->size());
   for (size_t i = 0; i < scanMsg->packets.size(); ++i)
   {
-      data_->unpack(scanMsg->packets[i], outPoints,fov_points,stamp_points);
+      data_->unpack(scanMsg->packets[i], points_xyzirt);
   }
 
+  for(int i = 0;i<outPoints->size();i++){
+    outPoints->at(i).x = points_xyzirt->at(i).x;
+    outPoints->at(i).y = points_xyzirt->at(i).y;
+    outPoints->at(i).z = points_xyzirt->at(i).z;
+    outPoints->at(i).intensity = points_xyzirt->at(i).intensity;
+  }
 
   pcl::PointCloud<pcl::PointXYZI>::Ptr  outputPtr(new pcl::PointCloud<pcl::PointXYZI>);
   outputPtr->resize(outPoints->size());
@@ -343,7 +359,10 @@ void Convert::processScan(const zvision_lidar_msgs::zvisionLidarScan::ConstPtr& 
   sampled_cloud->header.frame_id = scanMsg->header.frame_id;
   // point indices
   std::vector<int> index_used;
-  for(int i = 0;i<outputPtr->size();i++) index_used.push_back(i);
+  index_used.resize(outputPtr->size(), -1);
+  for(int i = 0;i<outputPtr->size();i++)
+    index_used.at(i) = i;
+
   if(DownsampleType::Voxel == downsample_type_)
   {
       /* update index_used */
@@ -361,12 +380,13 @@ void Convert::processScan(const zvision_lidar_msgs::zvisionLidarScan::ConstPtr& 
         voxel_grid_filter_.setInputCloud(temp_cloud);
         voxel_grid_filter_.filter(*sampled_cloud);
         // update intensity
-        index_used.clear();
-        index_used.shrink_to_fit();
+        index_used.resize(sampled_cloud->size(), -1);
+        id = 0;
         for(auto&p:sampled_cloud->points){
           int idx = int(p.intensity);
-          index_used.push_back(idx);
+          index_used.at(id) = idx;
           p.intensity = outputPtr->points[idx].intensity;
+          id++;
         }
       }
       else{
@@ -396,19 +416,19 @@ void Convert::processScan(const zvision_lidar_msgs::zvisionLidarScan::ConstPtr& 
       int line_interval = line_sample_;
       std::vector<int>& point_line_number = data_->point_line_number_;
       // update index_used
-      index_used.clear();
-      index_used.shrink_to_fit();
+      index_used.resize(outputPtr->size(), -1);
       for(int p = 0; p < outputPtr->size(); p++)
       {
           if(0 == (point_line_number[p] % (line_interval + 1))){
+              index_used.at(valid) = p;
               sampled_cloud->at(valid++) = outputPtr->at(p);
-              index_used.push_back(p);
           }
       }
       sampled_cloud->height = 1;
       sampled_cloud->width = valid;
       sampled_cloud->is_dense = false;
       sampled_cloud->resize(valid);
+      index_used.resize(valid);
       pcl::toROSMsg(*sampled_cloud, outMsg);
 
       pcl::PointCloud<pcl::PointXYZRGBA>::Ptr sampled_cloud_colored(new pcl::PointCloud<pcl::PointXYZRGBA>);
@@ -425,23 +445,75 @@ void Convert::processScan(const zvision_lidar_msgs::zvisionLidarScan::ConstPtr& 
       }
       pcl::toROSMsg(*sampled_cloud_colored,outMsgColored);
   }
-  else
-  {
-      pcl::toROSMsg(*outputPtr, outMsg);
+  else if(DownsampleType::ConfigFile == downsample_type_){
+    // filter pointcloud from config file
+    if(downsample_mask_ && (downsample_mask_->size() == outPoints->size()) && (device_type_ == zvision::ML30SA1)){
+      index_used.resize(outPoints->size(), -1);
+      sampled_cloud->resize(outPoints->size());
+      int id = 0;
+      for(int it = 0;it<outPoints->size();it++){
+        if(downsample_mask_->at(it)){
+            sampled_cloud->at(id) = outPoints->at(it);
+            index_used.at(id) = it;
+            id++;
+        }
+      }
+      sampled_cloud->height = 1;
+      sampled_cloud->width = id;
+      sampled_cloud->is_dense = false;
+      sampled_cloud->resize(id);
+       index_used.resize(id);
+    }
+    else
+    {
+      sampled_cloud->height = 1;
+      sampled_cloud->width = outPoints->size();
+      sampled_cloud->is_dense = false;
+      sampled_cloud->resize(outPoints->size());
+      for(int it = 0;it<outPoints->size();it++){
+        sampled_cloud->at(it) = outPoints->at(it);
+      }
+    }
 
+    if(pub_xyzi_)
+      pcl::toROSMsg(*sampled_cloud, outMsg);
+
+    if(pub_colored_){
       pcl::PointCloud<pcl::PointXYZRGBA>::Ptr sampled_cloud_colored(new pcl::PointCloud<pcl::PointXYZRGBA>);
-      sampled_cloud_colored->resize(outputPtr->size());
-      sampled_cloud_colored->header.stamp = outputPtr->header.stamp;
-      sampled_cloud_colored->header.frame_id = outputPtr->header.frame_id;
+      sampled_cloud_colored->resize(sampled_cloud->size());
+      sampled_cloud_colored->header.stamp = sampled_cloud->header.stamp;
+      sampled_cloud_colored->header.frame_id = sampled_cloud->header.frame_id;
       for(int i = 0; i < sampled_cloud_colored->size();++i){
-        sampled_cloud_colored->at(i).x = outputPtr->at(i).x; 
-        sampled_cloud_colored->at(i).y = outputPtr->at(i).y; 
-        sampled_cloud_colored->at(i).z = outputPtr->at(i).z; 
-        sampled_cloud_colored->at(i).r = color_table[(int)outputPtr->at(i).intensity *3 + 0]; 
-        sampled_cloud_colored->at(i).g = color_table[(int)outputPtr->at(i).intensity *3 + 1]; 
-        sampled_cloud_colored->at(i).b = color_table[(int)outputPtr->at(i).intensity *3 + 2];  
+        sampled_cloud_colored->at(i).x = sampled_cloud->at(i).x;
+        sampled_cloud_colored->at(i).y = sampled_cloud->at(i).y;
+        sampled_cloud_colored->at(i).z = sampled_cloud->at(i).z;
+        sampled_cloud_colored->at(i).r = color_table[(int)outputPtr->at(i).intensity *3 + 0];
+        sampled_cloud_colored->at(i).g = color_table[(int)outputPtr->at(i).intensity *3 + 1];
+        sampled_cloud_colored->at(i).b = color_table[(int)outputPtr->at(i).intensity *3 + 2];
       }
       pcl::toROSMsg(*sampled_cloud_colored,outMsgColored);
+    }
+  }
+  else
+  {
+      if(pub_xyzi_)
+        pcl::toROSMsg(*outputPtr, outMsg);
+
+        if(pub_colored_){
+          pcl::PointCloud<pcl::PointXYZRGBA>::Ptr sampled_cloud_colored(new pcl::PointCloud<pcl::PointXYZRGBA>);
+          sampled_cloud_colored->resize(outputPtr->size());
+          sampled_cloud_colored->header.stamp = outputPtr->header.stamp;
+          sampled_cloud_colored->header.frame_id = outputPtr->header.frame_id;
+          for(int i = 0; i < sampled_cloud_colored->size();++i){
+            sampled_cloud_colored->at(i).x = outputPtr->at(i).x;
+            sampled_cloud_colored->at(i).y = outputPtr->at(i).y;
+            sampled_cloud_colored->at(i).z = outputPtr->at(i).z;
+            sampled_cloud_colored->at(i).r = color_table[(int)outputPtr->at(i).intensity *3 + 0];
+            sampled_cloud_colored->at(i).g = color_table[(int)outputPtr->at(i).intensity *3 + 1];
+            sampled_cloud_colored->at(i).b = color_table[(int)outputPtr->at(i).intensity *3 + 2];
+          }
+          pcl::toROSMsg(*sampled_cloud_colored,outMsgColored);
+        }
   }
 
   if(pub_xyzi_) output_.publish(outMsg);
@@ -474,9 +546,9 @@ void Convert::processScan(const zvision_lidar_msgs::zvisionLidarScan::ConstPtr& 
       p.intensity = (uint8_t)dst_cloud->at(it).intensity;
 
       // we now filter timestamp and fov id for filtered  point
-      if(use_rt){
-        p.ring = fov_points[index_used[it]];
-        p.timestamp =  stamp_points[index_used[it]];
+      if(use_rt && (index_used[it] >= 0 )){
+        p.ring = points_xyzirt->at(index_used[it]).ring;
+        p.timestamp =  points_xyzirt->at(index_used[it]).timestamp;
       }
       else{
         p.ring = 0;
@@ -491,5 +563,80 @@ void Convert::processScan(const zvision_lidar_msgs::zvisionLidarScan::ConstPtr& 
 
 
 }
+
+uint8_t Convert::hex2uint8(char c) {
+
+		uint8_t val = 0x0F;
+		if (c >= 'A' && c <= 'Z')
+			val = c - 'A' + 10;
+		else if (c >= 'a' && c <= 'z')
+			val = c - 'a' + 10;
+		else if (c >= '0' && c <= '9')
+			val = c - '0';
+		return val;
+	}
+
+void Convert::getDownSampleMaskFromFile(std::string cfg_path) {
+
+		if (cfg_path.empty())
+			return;
+    // for ml30s device, update cover table
+		try {
+      // load cfg file data
+			std::ifstream in(cfg_path.c_str(), std::ios::in);
+			if (!in.is_open()){
+        ROS_WARN("Open downsample file failed.");
+        return;
+      }
+      downsample_mask_.reset( new std::vector<bool>(51200,true));
+			uint8_t flg = 0x80;
+			uint8_t fov_in_group[8] = {0, 2, 4, 6, 5, 7, 1, 3};
+			int total_cnt = 640;
+			std::string line;
+			int id = 0;
+			while (std::getline(in, line))
+			{
+				// check enter
+        if(line.at(line.size()-1) == 13){
+            line = line.substr(0,line.size()-1);
+        }
+				if (line.size() != 20)
+					continue;
+
+				// get value
+				uint8_t masks[10] = {0xFF};
+				for (int b = 0; b < 10;b++) {
+					char h = line.at(b * 2);
+					char l = line.at(b * 2 + 1);
+					masks [b] = hex2uint8(h) << 4 | hex2uint8(l);
+				}
+
+				// update
+				for (int j = 0; j < 10; j++) {
+					for (int k = 0; k < 8;k++) {
+						flg = 0x80 >> k;
+						if ((flg & masks[j]) != flg) {
+							int fov = id / 80;
+							int group = (id * 10 * 8 + j * 8 + k) % 6400;
+							int point_id = group * 8 + fov_in_group[fov];
+							downsample_mask_->at(point_id) = 0;
+						}
+					}
+				}
+				id++;
+			}
+
+			in.close();
+			if (id != total_cnt) {
+				downsample_mask_.reset();
+			}
+		}
+		catch (std::exception e)
+		{
+			downsample_mask_.reset();
+			return;
+		}
+
+	}
 
 }  // namespace zvision_lidar_pointcloud

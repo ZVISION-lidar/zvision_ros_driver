@@ -32,6 +32,7 @@
 #include <pcl_ros/point_cloud.h>
 #include <pcl_ros/impl/transforms.hpp>
 #include <pcl_conversions/pcl_conversions.h>
+#include "zvision_lidar_point_cloud_type.h"
 #include <stdio.h>
 #include <iostream>
 #include <memory>
@@ -83,13 +84,14 @@ public:
   bool isCalibrationInitOk();
 
   /*unpack the ML30S-A1 UDP packet and opuput PCL PointXYZI type with point fov id and timestamp*/
-  void unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::PointCloud<pcl::PointXYZI>::Ptr pointcloud, std::vector<int>& fovs, std::vector<double>& stamps);
+  void unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::PointCloud<ZvPointXYZIRT>::Ptr pointcloud);
 
   /*gps time stamp*/
   void getTimeStampFromUdpPkt(const zvision_lidar_msgs::zvisionLidarPacket& pkt, long long int& unix_sec, long long int&  unix_microsec);
 
   bool cal_init_ok_;
   bool use_lidar_time_;/*0:local time, 1:get the timestamp from udp*/
+  bool use_lidar_line_id_;
   std::string dev_ip_;
 
   zvision::LidarType device_type_;

@@ -26,6 +26,7 @@ RawData::RawData()
 {
   this->cal_init_ok_ = false;
   this->use_lidar_time_ = false; /* default is local timestamp */
+  this->use_lidar_line_id_ = false;
   this->cal_.reset(new zvision::CalibrationData());
   this->cal_lut_.reset(new zvision::PointCalibrationTable());
   point_line_number_.resize(MAX_POINTS, 0);
@@ -48,6 +49,7 @@ void RawData::loadConfigFile(ros::NodeHandle node, ros::NodeHandle private_nh)
   std::string model;
   double xt, yt, zt, xr, yr, zr;
   private_nh.param("use_lidar_time", this->use_lidar_time_, false);/*default is local timestamp*/
+  private_nh.param("use_lidar_line_id", this->use_lidar_line_id_, false);
   private_nh.param("angle_path", anglePath, std::string(""));/*angle file *.cal*/
   private_nh.param("model", model, std::string("ML30SA1"));/*device type*/
   private_nh.param("device_ip", this->dev_ip_, std::string(""));/*device ip*/
@@ -135,14 +137,8 @@ bool RawData::isCalibrationInitOk()
  *  @param pkt raw packet to unpack
  *  @param pc shared pointer to point cloud (points are appended)
  */
-void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::PointCloud<pcl::PointXYZI>::Ptr pointcloud, std::vector<int>& fovs, std::vector<double>& stamps)
+void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::PointCloud<ZvPointXYZIRT>::Ptr pointcloud)
 {
-
-  // init fovs and stamps
-  if(fovs.size() !=pointcloud->size())
-      fovs.resize(pointcloud->size(),0);
-  if(stamps.size() !=pointcloud->size())
-      stamps.resize(pointcloud->size(),0);
   long long time_from_pkt_s;
   long long time_from_pkt_us;
   getTimeStampFromUdpPkt(pkt, time_from_pkt_s, time_from_pkt_us);
@@ -150,18 +146,19 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
 
   float azimuth;
   int intensity;
-  pcl::PointXYZI point;
+  ZvPointXYZIRT point;
+  ZvPointXYZIRT p_invalid;
+  p_invalid.x = std::numeric_limits<float>::quiet_NaN();
+  p_invalid.y = std::numeric_limits<float>::quiet_NaN();
+  p_invalid.z = std::numeric_limits<float>::quiet_NaN();
+  p_invalid.intensity = 0;
+
   const unsigned char *data = (const unsigned char *)(&(pkt.data[0]));
   int udp_seq = 0;
   udp_seq = (int)(data[3]) + ((data[2] & 0xF) << 8);
 
   if(device_type_ == zvision::ML30SA1)
   {
-        pcl::PointXYZI p_invalid;
-        p_invalid.x = std::numeric_limits<float>::quiet_NaN();
-        p_invalid.y = std::numeric_limits<float>::quiet_NaN();
-        p_invalid.z = std::numeric_limits<float>::quiet_NaN();
-        p_invalid.intensity = 0;
         // check cal
         if(cal_lut_->data.size() != pointcloud->size()){
             for(int i = 0;i<pointcloud->size();i++){
@@ -171,21 +168,32 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
         }
 
     uint8_t fov_id[POINT_PER_GROUP] = {0,6,1,7,2,4,3,5};
+    int fov_line_points = 80;
+    if(pointcloud->size() == 25600){
+        fov_line_points = 40;
+    }else if(pointcloud->size() == 12800){
+        fov_line_points = 20;
+    }
+    int line_num = pointcloud->size() / 8 / fov_line_points;
     // firing interval
     float firing_interval_us = .0f;//0.00000078125f = 40 * 0.001/51200;
 	  for (int group = 0; group < GROUP_PER_PACKET; group++)   // 1 packet:40 data group
 	  {
 		  const unsigned char *pc = data + 4 + group * 8 * 4;/*group address*/
           int group_index = udp_seq * GROUP_PER_PACKET * POINT_PER_GROUP + group * POINT_PER_GROUP;/*group number, to search the angle file *.cal*/
-
+          int group_id = udp_seq * GROUP_PER_PACKET + group;
           for (int laser_id = 0; laser_id < POINT_PER_GROUP; laser_id++)/*8 Points per laser*/
 		  {
               int point_num = group_index + laser_id;
               int disTemp = 0;
               if(point_num >= 51200) continue;
 
-        fovs[point_num] = fov_id[laser_id];
-        stamps[point_num] = stamp_pkt + firing_interval_us * (group * POINT_PER_GROUP + laser_id) ;
+              uint8_t ring = fov_id[laser_id];
+              if(use_lidar_line_id_){
+                int offset = fov_id[laser_id] < 4 ? 0:80;
+                ring =  group_id / line_num + offset;
+              }
+              double timestamp = stamp_pkt + firing_interval_us * (group * POINT_PER_GROUP + laser_id) ;
 
 			  //dis_high
 			  unsigned char Dis_High = (u_char)(pc[0 + 4 * laser_id]);
@@ -193,10 +201,11 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
 			  unsigned char Int_High = (u_char)(pc[2 + 4 * laser_id]);
 			  unsigned char Int_Low  = (u_char)(pc[3 + 4 * laser_id]);
 
-
 			  disTemp = (((Dis_High << 8) + Dis_Low) << 3) + (int)((Int_High & 0xE0) >> 5);
               if(disTemp == 0x0){
                 pointcloud->at(point_num) = p_invalid;
+                pointcloud->at(point_num).ring =ring;
+                pointcloud->at(point_num).timestamp =timestamp;
                 continue;  
               }
 			  double distantce_real_live = disTemp * 0.0015;/*distance from udp*/
@@ -207,17 +216,19 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
               point.x = distantce_real_live * cal.cos_ele * cal.sin_azi;/*x*/
               point.y = distantce_real_live * cal.cos_ele * cal.cos_azi;/*y*/
               point.z = distantce_real_live * cal.sin_ele;/*z*/
-              point.intensity = intensity;
+              point.intensity = intensity & 0xFF;
+              point.ring = ring;
+              point.timestamp =  timestamp;
 
 			  /*apply transform*/
 			  double Ax = x_rotation;
 			  double Ay = y_rotation;
 			  double Az = z_rotation;
 			  double x, y, z;
-			  pcl::PointXYZI sourPoint   = point;
-			  pcl::PointXYZI xTransPoint = point;
-			  pcl::PointXYZI yTransPoint = point;
-			  pcl::PointXYZI zTransPoint = point;
+			  ZvPointXYZIRT sourPoint   = point;
+			  ZvPointXYZIRT xTransPoint = point;
+			  ZvPointXYZIRT yTransPoint = point;
+			  ZvPointXYZIRT zTransPoint = point;
 
 			  x = sourPoint.x;/*X rotation*/
 			  y = sourPoint.y;
@@ -253,11 +264,6 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
   }
   else if(device_type_ == zvision::ML30SPlusA1)
    {
-      pcl::PointXYZI p_invalid;
-      p_invalid.x = std::numeric_limits<float>::quiet_NaN();
-      p_invalid.y = std::numeric_limits<float>::quiet_NaN();
-      p_invalid.z = std::numeric_limits<float>::quiet_NaN();
-      p_invalid.intensity = 0;
       // check cal
       if(cal_lut_->data.size() != pointcloud->size()){
         for(int i = 0;i<pointcloud->size();i++){
@@ -287,9 +293,8 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
               int disTemp = 0;
               if(point_num >= 51200) continue;
 
-              fovs[point_num] = fov_id[laser_id];
-              stamps[point_num] = stamp_pkt + firing_interval_us * (group * POINT_PER_GROUP_ML30SPlus_A1 + laser_id) ;
-
+              uint8_t ring = fov_id[laser_id];
+              double timestamp = stamp_pkt + firing_interval_us * (group * POINT_PER_GROUP_ML30SPlus_A1 + laser_id) ;
 			  //dis_high
 			  unsigned char Dis_High = (u_char)(pc[0 + 4 * laser_id]);
 			  unsigned char Dis_Low  = (u_char)(pc[1 + 4 * laser_id]);
@@ -299,6 +304,8 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
 			  disTemp = (((Dis_High << 8) + Dis_Low) << 3) + (int)((Int_High & 0xE0) >> 5);
               if(disTemp == 0x0){
                 pointcloud->at(point_num) = p_invalid;
+                pointcloud->at(point_num).ring =ring;
+                pointcloud->at(point_num).timestamp =timestamp;
                 continue;
               }
 			  double distantce_real_live = disTemp * 0.0015;
@@ -309,17 +316,19 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
               point.x = distantce_real_live * cal.cos_ele * cal.sin_azi;/*x*/
               point.y = distantce_real_live * cal.cos_ele * cal.cos_azi;/*y*/
               point.z = distantce_real_live * cal.sin_ele;/*z*/
-              point.intensity = intensity;
+              point.intensity = intensity & 0xFF;
+              point.ring = ring;
+              point.timestamp = timestamp ;
 
 			  /*apply transform*/
 			  double Ax = x_rotation;
 			  double Ay = y_rotation;
 			  double Az = z_rotation;
 			  double x, y, z;
-			  pcl::PointXYZI sourPoint   = point;
-			  pcl::PointXYZI xTransPoint = point;
-			  pcl::PointXYZI yTransPoint = point;
-			  pcl::PointXYZI zTransPoint = point;
+			  ZvPointXYZIRT sourPoint   = point;
+			  ZvPointXYZIRT xTransPoint = point;
+			  ZvPointXYZIRT yTransPoint = point;
+			  ZvPointXYZIRT zTransPoint = point;
 
 			  x = sourPoint.x;/*X rotation*/
 			  y = sourPoint.y;
@@ -367,8 +376,8 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
               int point_num = group_index + laser_id;
               int disTemp = 0;
 
-        fovs[point_num] = fov_id[laser_id];
-        stamps[point_num] = stamp_pkt + firing_interval_us * (group * POINT_PER_GROUP_ML30 + laser_id) ;
+              uint8_t ring = fov_id[laser_id];
+              double timestamp = stamp_pkt + firing_interval_us * (group * POINT_PER_GROUP_ML30 + laser_id) ;
 
 			  //dis_high
 			  unsigned char Dis_High = (u_char)(pc[4 + 4 * laser_id]);
@@ -378,12 +387,9 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
 
 			  disTemp = (((Dis_High << 8) + Dis_Low) << 3) + (int)((Int_High & 0xE0) >> 5);
               if(disTemp == 0x0){
-                pcl::PointXYZI p_invalid;
-                p_invalid.x = std::numeric_limits<float>::quiet_NaN();
-                p_invalid.y = std::numeric_limits<float>::quiet_NaN();
-                p_invalid.z = std::numeric_limits<float>::quiet_NaN();
-                p_invalid.intensity = 0;
                 pointcloud->at(point_num) = p_invalid;
+                pointcloud->at(point_num).ring =ring;
+                pointcloud->at(point_num).timestamp =timestamp;
                 continue;  
               }
 			  double distantce_real_live = disTemp * 0.0015;/*distance from udp*/
@@ -394,17 +400,19 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
               point.x = distantce_real_live * cal.cos_ele * cal.sin_azi;/*x*/
               point.y = distantce_real_live * cal.cos_ele * cal.cos_azi;/*y*/
               point.z = distantce_real_live * cal.sin_ele;/*z*/
-			  point.intensity = intensity;
+			  point.intensity = intensity & 0xFF;
+              point.ring = ring;
+              point.timestamp = timestamp;
 
 			  /*apply transform*/
 			  double Ax = x_rotation;
 			  double Ay = y_rotation;
 			  double Az = z_rotation;
 			  double x, y, z;
-			  pcl::PointXYZI sourPoint   = point;
-			  pcl::PointXYZI xTransPoint = point;
-			  pcl::PointXYZI yTransPoint = point;
-			  pcl::PointXYZI zTransPoint = point;
+			  ZvPointXYZIRT sourPoint   = point;
+			  ZvPointXYZIRT xTransPoint = point;
+			  ZvPointXYZIRT yTransPoint = point;
+			  ZvPointXYZIRT zTransPoint = point;
 
 			  x = sourPoint.x;/*X rotation*/
 			  y = sourPoint.y;
@@ -451,9 +459,8 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
               int point_num = group_index + laser_id;
               int disTemp = 0;
 
-              fovs[point_num] = fov_id[laser_id];
-              stamps[point_num] = stamp_pkt + firing_interval_us * (group * POINT_PER_GROUP_MLX + laser_id) ;
-
+              uint8_t ring = fov_id[laser_id];
+              double timestamp = stamp_pkt + firing_interval_us * (group * POINT_PER_GROUP_MLX + laser_id) ;
               //dis_high
               unsigned char Dis_High = (u_char)(pc[4 + 4 * laser_id]);
               unsigned char Dis_Low  = (u_char)(pc[5 + 4 * laser_id]);
@@ -462,12 +469,9 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
 
 			  disTemp = (((Dis_High << 8) + Dis_Low) << 3) + (int)((Int_High & 0xE0) >> 5);
               if(disTemp == 0x0){
-                pcl::PointXYZI p_invalid;
-                p_invalid.x = std::numeric_limits<float>::quiet_NaN();
-                p_invalid.y = std::numeric_limits<float>::quiet_NaN();
-                p_invalid.z = std::numeric_limits<float>::quiet_NaN();
-                p_invalid.intensity = 0;
                 pointcloud->at(point_num) = p_invalid;
+                pointcloud->at(point_num).ring =ring;
+                pointcloud->at(point_num).timestamp =timestamp;
                 continue;  
               }
               double distantce_real_live = disTemp * 0.0015;/*distance from udp*/
@@ -478,17 +482,19 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
               point.x = distantce_real_live * cal.cos_ele * cal.sin_azi;/*x*/
               point.y = distantce_real_live * cal.cos_ele * cal.cos_azi;/*y*/
               point.z = distantce_real_live * cal.sin_ele;/*z*/
-              point.intensity = intensity;
+              point.intensity = intensity & 0xFF;
+              point.ring = ring;
+              point.timestamp = timestamp;
 
               /*apply transform*/
               double Ax = x_rotation;
               double Ay = y_rotation;
               double Az = z_rotation;
               double x, y, z;
-              pcl::PointXYZI sourPoint   = point;
-              pcl::PointXYZI xTransPoint = point;
-              pcl::PointXYZI yTransPoint = point;
-              pcl::PointXYZI zTransPoint = point;
+              ZvPointXYZIRT sourPoint   = point;
+              ZvPointXYZIRT xTransPoint = point;
+              ZvPointXYZIRT yTransPoint = point;
+              ZvPointXYZIRT zTransPoint = point;
 
               x = sourPoint.x;/*X rotation*/
               y = sourPoint.y;
@@ -535,8 +541,8 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
               int point_num = group_index + laser_id;
               int disTemp = 0;
 
-              fovs[point_num] = fov_id[laser_id];
-              stamps[point_num] = stamp_pkt + firing_interval_us * (group * POINT_PER_GROUP_MLX + laser_id) ;
+              uint8_t ring = fov_id[laser_id];
+              double timestamp = stamp_pkt + firing_interval_us * (group * POINT_PER_GROUP_MLX + laser_id) ;
 
               //dis_high
               unsigned char Dis_High = (u_char)(pc[4 + 4 * laser_id]);
@@ -546,12 +552,9 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
 
 			  disTemp = (((Dis_High << 8) + Dis_Low) << 3) + (int)((Int_High & 0xE0) >> 5);
               if(disTemp == 0x0){
-                pcl::PointXYZI p_invalid;
-                p_invalid.x = std::numeric_limits<float>::quiet_NaN();
-                p_invalid.y = std::numeric_limits<float>::quiet_NaN();
-                p_invalid.z = std::numeric_limits<float>::quiet_NaN();
-                p_invalid.intensity = 0;
                 pointcloud->at(point_num) = p_invalid;
+                pointcloud->at(point_num).ring =ring;
+                pointcloud->at(point_num).timestamp =timestamp;
                 continue;  
               }
               double distantce_real_live = disTemp * 0.0015;/*distance from udp*/
@@ -562,17 +565,19 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
               point.x = distantce_real_live * cal.cos_ele * cal.sin_azi;/*x*/
               point.y = distantce_real_live * cal.cos_ele * cal.cos_azi;/*y*/
               point.z = distantce_real_live * cal.sin_ele;/*z*/
-              point.intensity = intensity;
+              point.intensity = intensity & 0xFF;
+              point.ring = ring;
+              point.timestamp =  timestamp;
 
               /*apply transform*/
               double Ax = x_rotation;
               double Ay = y_rotation;
               double Az = z_rotation;
               double x, y, z;
-              pcl::PointXYZI sourPoint   = point;
-              pcl::PointXYZI xTransPoint = point;
-              pcl::PointXYZI yTransPoint = point;
-              pcl::PointXYZI zTransPoint = point;
+              ZvPointXYZIRT sourPoint   = point;
+              ZvPointXYZIRT xTransPoint = point;
+              ZvPointXYZIRT yTransPoint = point;
+              ZvPointXYZIRT zTransPoint = point;
 
               x = sourPoint.x;/*X rotation*/
               y = sourPoint.y;
@@ -619,8 +624,8 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
               int point_num = group_index + laser_id;
               int disTemp = 0;
 
-              fovs[point_num] = fov_id[laser_id];
-              stamps[point_num] = stamp_pkt + firing_interval_us * (group * POINT_PER_GROUP_MLXS + laser_id) ;
+              uint8_t ring = fov_id[laser_id];
+              double timestamp = stamp_pkt + firing_interval_us * (group * POINT_PER_GROUP_MLXS + laser_id) ;
 
               //dis_high
               unsigned char Dis_High = (u_char)(pc[4 + 4 * laser_id]);
@@ -630,12 +635,9 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
 
 			  disTemp = (((Dis_High << 8) + Dis_Low) << 3) + (int)((Int_High & 0xE0) >> 5);
               if(disTemp == 0x0){
-                pcl::PointXYZI p_invalid;
-                p_invalid.x = std::numeric_limits<float>::quiet_NaN();
-                p_invalid.y = std::numeric_limits<float>::quiet_NaN();
-                p_invalid.z = std::numeric_limits<float>::quiet_NaN();
-                p_invalid.intensity = 0;
                 pointcloud->at(point_num) = p_invalid;
+                pointcloud->at(point_num).ring =ring;
+                pointcloud->at(point_num).timestamp =timestamp;
                 continue;  
               }
               double distantce_real_live = disTemp * 0.0015;/*distance from udp*/
@@ -646,17 +648,19 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
               point.x = distantce_real_live * cal.cos_ele * cal.sin_azi;/*x*/
               point.y = distantce_real_live * cal.cos_ele * cal.cos_azi;/*y*/
               point.z = distantce_real_live * cal.sin_ele;/*z*/
-              point.intensity = intensity;
+              point.intensity = intensity & 0xFF;
+              point.ring = ring;
+              point.timestamp =  timestamp;
 
               /*apply transform*/
               double Ax = x_rotation;
               double Ay = y_rotation;
               double Az = z_rotation;
               double x, y, z;
-              pcl::PointXYZI sourPoint   = point;
-              pcl::PointXYZI xTransPoint = point;
-              pcl::PointXYZI yTransPoint = point;
-              pcl::PointXYZI zTransPoint = point;
+              ZvPointXYZIRT sourPoint   = point;
+              ZvPointXYZIRT xTransPoint = point;
+              ZvPointXYZIRT yTransPoint = point;
+              ZvPointXYZIRT zTransPoint = point;
 
               x = sourPoint.x;/*X rotation*/
               y = sourPoint.y;

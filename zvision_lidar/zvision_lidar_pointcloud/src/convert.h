@@ -44,6 +44,7 @@ public:
       None = 0,
       Voxel = 1,
       Line = 2,
+      ConfigFile = 3,
   };
   uint8_t color_table[256*4] ={
     0,126,174,
@@ -304,11 +305,19 @@ public:
     250,30,0
   };
 private:
+
   void callback(zvision_lidar_pointcloud::CloudNodeConfig& config, uint32_t level);
 
   void processScan(const zvision_lidar_msgs::zvisionLidarScan::ConstPtr& scanMsg);
+
   int* get_nearest_point_index();
+
   double calDistance(pcl::PointXYZI a, pcl::PointXYZI b);
+
+	uint8_t hex2uint8(char c);
+
+  void getDownSampleMaskFromFile(std::string cfg_path);
+
   /// Pointer to dynamic reconfigure service srv_
   /**/std::shared_ptr<dynamic_reconfigure::Server<zvision_lidar_pointcloud::CloudNodeConfig> > srv_;
 
@@ -330,6 +339,7 @@ private:
   int line_sample_;
   int* nearest_table_;
   DownsampleType downsample_type_;
+  std::shared_ptr<std::vector<bool>> downsample_mask_ = nullptr;
 };
 
 }  // namespace zvision_lidar_pointcloud

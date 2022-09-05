@@ -86,7 +86,7 @@ In the launch file, we could set the parameter (timestamp_type) to fill PointClo
 | line_sample         | parameter of line downsample, <br />nly take effect when downsample_type is set to **dowensample_line** | >=1                                              | Keep the data of first line every N lines in each field of view |
 | voxel_leaf_size     | parameter of voxel downsample,<br />only take effect when downsample_type is set to **downsample_voxel** | None-zero value                                  | size of voxel grid (unit: m)                                 |
 | use_outlier_removal | outlier_removal switch                                       | true / false                                     | true: switch on outlier_removal<br />false: switch off outlier_removal |
-| outlier_th          | threshold of outliers                                        | positive floating point number                   | *Squared* Euclidean *distance*                               |
+| outlier_th          | threshold of outliers                                        | positive floating point number                   | This is a *dynamic distance* *coefficient*. Filter distance = coefficient * point distance. By default 0.05 |
 
 
 

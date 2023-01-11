@@ -2,6 +2,7 @@ project(zvision_lidar_driver)
 cmake_minimum_required(VERSION 2.8.3)
 
 add_compile_options(-std=c++11)
+add_compile_options(-std=c++14)
 set(CMAKE_BUILD_TYPE Release)#RelWithDebInfo
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)

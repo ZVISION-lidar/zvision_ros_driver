@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 2.8.3)
 project(zvision_lidar_pointcloud)
 
 add_compile_options(-std=c++11)
+add_compile_options(-std=c++14)
 set(CMAKE_BUILD_TYPE Release)#RelWithDebInfo
 set(${PROJECT_NAME}_CATKIN_DEPS
     angles

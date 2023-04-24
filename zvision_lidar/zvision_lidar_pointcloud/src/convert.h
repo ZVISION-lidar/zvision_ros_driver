@@ -27,6 +27,7 @@
 #include "zvision_lidar_pointcloud/CloudNodeConfig.h"
 #include "rawdata.h"
 #include "tools/tools.h"
+#include "zvision_lidar_point_cloud_type.h"
 
 namespace zvision_lidar_pointcloud
 {
@@ -324,6 +325,7 @@ private:
   zvision::LidarType device_type_;
   /**/std::shared_ptr<zvision_lidar_rawdata::RawData> data_;
   ros::Subscriber zvision_lidar_scan_;
+  ros::Publisher out_info_;
   ros::Publisher output_;
   ros::Publisher output_colored_;
   ros::Publisher out_xyzirt_;
@@ -331,6 +333,7 @@ private:
   bool filter_enable_;
   bool use_outlier_removal_;
   double outlier_th_;
+  bool pub_info_;
   bool pub_xyzi_;
   bool pub_colored_;
   bool pub_xyzirt_;
@@ -341,6 +344,5 @@ private:
   DownsampleType downsample_type_;
   std::shared_ptr<std::vector<bool>> downsample_mask_ = nullptr;
 };
-
 }  // namespace zvision_lidar_pointcloud
 #endif

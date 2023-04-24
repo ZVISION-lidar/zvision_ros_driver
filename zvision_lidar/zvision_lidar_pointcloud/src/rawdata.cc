@@ -60,6 +60,8 @@ void RawData::loadConfigFile(ros::NodeHandle node, ros::NodeHandle private_nh)
       device_type_ = zvision::ML30SA1;
   else if(model == std::string("ML30S+A1"))
       device_type_ = zvision::ML30SPlusA1;
+  else if(model == std::string("ML30S+B1"))
+      device_type_ = zvision::ML30SPlusB1;
   else if(model == std::string("MLX"))
       device_type_ = zvision::MLX;
   else if(model == std::string("MLXA1"))
@@ -106,7 +108,8 @@ void RawData::loadConfigFile(ros::NodeHandle node, ros::NodeHandle private_nh)
 
       //compute sin cos
       zvision::LidarTools::ComputeCalibrationData(*(this->cal_.get()), *(this->cal_lut_.get()));
-      if((device_type_ == zvision::Unknown) || (device_type_ != this->cal_lut_->model))
+      if((device_type_ == zvision::Unknown) || (device_type_ != this->cal_lut_->model) && \
+       ( device_type_ != zvision::ML30SPlusB1 &&  this->cal_lut_->model != zvision::ML30SPlusA1))
           ROS_ERROR("Device %s's calibration not matched, device type is %s, cal type is %s", this->dev_ip_.c_str(), zvision::LidarTools::GetDeviceTypeString(device_type_).c_str(),
                 zvision::LidarTools::GetDeviceTypeString(this->cal_lut_->model).c_str());
       else
@@ -262,7 +265,7 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
 		  }
 	  }
   }
-  else if(device_type_ == zvision::ML30SPlusA1)
+  else if(device_type_ == zvision::ML30SPlusA1 || device_type_ == zvision::ML30SPlusB1 )
    {
       // check cal
       if(cal_lut_->data.size() != pointcloud->size()){
@@ -613,18 +616,22 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
   else if(device_type_ == zvision::MLXS)
   {
       uint8_t fov_id[POINT_PER_GROUP_MLXS] = {0,1,2};
+      int line_num = pointcloud->size() / 3 / 200;
       float firing_interval_us = 0.0f;
       for (int group = 0; group < GROUP_PER_PACKET_MLXS; group++)   // 1 packet:80 data group
       {
           const unsigned char *pc = data + group * 8 * 2 + 4;/*group address*/
           int group_index = udp_seq * GROUP_PER_PACKET_MLXS * POINT_PER_GROUP_MLXS + group * POINT_PER_GROUP_MLXS;/*group number, to search the angle file *.cal*/
-
+          int group_id = udp_seq * GROUP_PER_PACKET_MLXS + group;
           for (int laser_id = 0; laser_id < POINT_PER_GROUP_MLXS; laser_id++)/*3 Points per laser*/
           {
               int point_num = group_index + laser_id;
               int disTemp = 0;
 
               uint8_t ring = fov_id[laser_id];
+              if(use_lidar_line_id_){
+                ring =  group_id / line_num;
+              }
               double timestamp = stamp_pkt + firing_interval_us * (group * POINT_PER_GROUP_MLXS + laser_id) ;
 
               //dis_high
@@ -747,6 +754,25 @@ void RawData::getTimeStampFromUdpPkt(const zvision_lidar_msgs::zvisionLidarPacke
         unix_microsec = MillS * 1000 + MicroS;
         //return (uint64_t)seconds * 1000000000 + MillS * 1000000 + MicroS * 1000;
     }
+}
+
+/** @brief get gps/ptp status from raw udp packet
+ *
+ *  @param pkt raw packet to get ptp/gps lock info
+ *  @param ptp: true for ptp false for gps, lock: true for lock false for unlock
+ */
+void RawData::getLockStatusFromUdpPkt(const zvision_lidar_msgs::zvisionLidarPacket& pkt, bool& ptp, bool& lock)
+{
+    const unsigned char *data = (const unsigned char *)(&(pkt.data[0]));
+    uint8_t gps_ptp_status_2bits = (data[2] & 0x30) >> 4;
+    ptp = gps_ptp_status_2bits &0x02;
+    lock = gps_ptp_status_2bits &0x01;
+}
+
+void RawData::getApdBiasFromUdpPkt(const zvision_lidar_msgs::zvisionLidarPacket& pkt,float& bias)
+{
+    const unsigned char *data = (const unsigned char *)(&(pkt.data[0]));
+    bias = 1.0f * (((int)((0x0F & data[1296])) << 8) + (int)(data[1297])) / 4096.0 * 252.5;
 }
 
 void RawData::PollCalibrationData(void) {

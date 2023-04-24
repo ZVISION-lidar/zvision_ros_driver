@@ -54,6 +54,9 @@ zvisionLidarDriver::zvisionLidarDriver(ros::NodeHandle node, ros::NodeHandle pri
   else if(config_.model == "ML30S+A1"){
     model_full_name = "ZVISION-LiDAR-ML30S+A1";
   }
+  else if(config_.model == "ML30S+B1"){
+    model_full_name = "ZVISION-LiDAR-ML30S+B1";
+  }
   else if(config_.model == "MLX"){
     model_full_name = "ZVISION-LiDAR-MLX";
   }
@@ -176,7 +179,7 @@ zvisionLidarDriver::zvisionLidarDriver(ros::NodeHandle node, ros::NodeHandle pri
 	                                        FrequencyStatusParam(&diag_min_freq_, &diag_max_freq_, 0.1, 10),
 	                                        TimeStampStatusParam()));
   }
-  else if(config_.model == "ML30S+A1"){
+  else if(config_.model == "ML30S+A1" || config_.model == "ML30S+B1"){
     std::string dump_file;
 	  private_nh.param("pcap", dump_file, std::string(""));
 

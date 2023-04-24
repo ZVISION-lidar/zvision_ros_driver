@@ -166,6 +166,11 @@ namespace zvision {
         */
         int SyncSend(std::string& data, int len);
 
+         /** \brief Get available bytes count.
+        * \return available bytes len.
+        */
+	    int GetAvailableBytesLen();
+
         /** \brief Calls the SyncRecv method to reveive data from server.
           * \param[in] data the buffer to store the data from server
           * \param[in] len  the length to receive

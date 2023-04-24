@@ -26,6 +26,7 @@ namespace zvision {
         ML30B1,
         ML30SA1,
         ML30SPlusA1,
+        ML30SPlusB1,
         MLX,
         MLXA1,
         MLXS,
@@ -57,6 +58,8 @@ namespace zvision {
     class LidarTools{
         public:
             static bool CheckDeviceRet(std::string ret);
+            static int GetOnlineML30SPlusB1CalibrationData(std::string ip, CalibrationData& cal);
+            static int GetOnlineMLXSCalibrationData(std::string ip, CalibrationData& cal);
             static int GetOnlineCalibrationData(std::string ip, CalibrationData& cal, LidarType tp = LidarType::ML30SA1);
             static int ReadCalibrationFile(std::string filename, CalibrationData& cal);
             static void ComputeCalibrationData(CalibrationData& cal, PointCalibrationTable& cal_lut);
@@ -81,6 +84,8 @@ namespace zvision {
             /** \brief Get lidar state.
             */
             static bool GetLidarOnlineState(std::string ip);
+
+            static uint16_t GetCheckSum(std::string str);
     };
 }
 

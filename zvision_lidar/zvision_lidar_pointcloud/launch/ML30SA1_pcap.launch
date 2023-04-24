@@ -8,7 +8,7 @@
   <arg name="publisher_pointcloud_type_xyzi" default="false" />
   <arg name="use_blue_gold_color_scheme" default="false" />
   <arg name="publisher_pointcloud_type_xyzirt" default="true" />
-  <arg name="use_lidar_line_id" default="false" />
+  <arg name="use_lidar_line_id" default="true" />
   <!-- start nodelet manager -->
   <node pkg="nodelet" type="nodelet" name="$(arg manager)" args="manager" output="screen"/>
 

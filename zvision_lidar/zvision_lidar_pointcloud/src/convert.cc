@@ -19,7 +19,6 @@
 #include "tools/tools.h"
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/filters/statistical_outlier_removal.h>
-#include "zvision_lidar_point_cloud_type.h"
 namespace zvision_lidar_pointcloud
 {
 std::string model;
@@ -151,6 +150,11 @@ Convert::Convert(ros::NodeHandle node, ros::NodeHandle private_nh) : data_(new z
   private_nh.param("outlier_th", outlier_th_, 0.05);
   ROS_INFO("Outlier points threshold  is, [%.3f].", outlier_th_);
   
+  private_nh.param("publisher_frame_info", pub_info_, true);
+  ROS_INFO("publisher_frame_info: %c", pub_info_?'y':'n');
+  if(pub_info_)
+    out_info_ = node.advertise<zvision_lidar_msgs::zvisionLidarInformation>("zvision_lidar_frame_info", 20);
+
   private_nh.param("publisher_pointcloud_type_xyzi", pub_xyzi_, true);
   ROS_INFO("publisher_pointcloud_type_xyzi: %c", pub_xyzi_?'y':'n');
   if(pub_xyzi_) 
@@ -228,7 +232,7 @@ void Convert::processScan(const zvision_lidar_msgs::zvisionLidarScan::ConstPtr& 
 	  outPoints->is_dense = false;
 	  outPoints->resize(outPoints->height * outPoints->width);
   }
-  else if(device_type_ == zvision::ML30SPlusA1){
+  else if(device_type_ == zvision::ML30SPlusA1 || device_type_ == zvision::ML30SPlusB1){
 	  outPoints->height = 1;
 	  outPoints->width = 51200;
 	  outPoints->is_dense = false;
@@ -264,6 +268,25 @@ void Convert::processScan(const zvision_lidar_msgs::zvisionLidarScan::ConstPtr& 
   {
       data_->getTimeStampFromUdpPkt(scanMsg->packets[0], time_from_pkt_s, time_from_pkt_us);
       outPoints->header.stamp = time_from_pkt_s * 1000000 + time_from_pkt_us;
+  }
+
+   // publish lidar information
+  if(pub_info_)
+  {
+    zvision_lidar_msgs::zvisionLidarInformationPtr info(new zvision_lidar_msgs::zvisionLidarInformation);
+    // get lidar first udp packet timestamp from udp data
+    bool is_ptp = false;
+    bool is_lock = false;
+    data_->getLockStatusFromUdpPkt(scanMsg->packets[0],is_ptp,  is_lock);
+    info->lock_status = is_lock;
+    info->is_ptp = is_ptp;
+    float bias = .0f;
+    data_->getApdBiasFromUdpPkt(scanMsg->packets[0], bias);
+    info->apd_bias = bias;
+    uint32_t sec = outPoints->header.stamp / 1000000;
+    uint32_t nsec = (outPoints->header.stamp%1000000) * 1000;
+    info->stamp = ros::Time(sec, nsec);
+    out_info_.publish(info);
   }
 
   // parsing packets
@@ -367,27 +390,7 @@ void Convert::processScan(const zvision_lidar_msgs::zvisionLidarScan::ConstPtr& 
   {
       /* update index_used */
       if(pub_xyzirt_){
-        // set point index with intensity
-        pcl::PointCloud<pcl::PointXYZI>::Ptr temp_cloud(new pcl::PointCloud<pcl::PointXYZI>());
-        temp_cloud->header = outPoints->header;
-        temp_cloud->points = outputPtr->points;
-        int id = 0;
-        for(auto& p:temp_cloud->points){
-          p.intensity = id;
-          id++;
-        }
-        // filter temp pointcloud
-        voxel_grid_filter_.setInputCloud(temp_cloud);
-        voxel_grid_filter_.filter(*sampled_cloud);
-        // update intensity
-        index_used.resize(sampled_cloud->size(), -1);
-        id = 0;
-        for(auto&p:sampled_cloud->points){
-          int idx = int(p.intensity);
-          index_used.at(id) = idx;
-          p.intensity = outputPtr->points[idx].intensity;
-          id++;
-        }
+        sampled_cloud->points = outputPtr->points;
       }
       else{
         voxel_grid_filter_.setInputCloud(outputPtr);
@@ -638,5 +641,4 @@ void Convert::getDownSampleMaskFromFile(std::string cfg_path) {
 		}
 
 	}
-
 }  // namespace zvision_lidar_pointcloud

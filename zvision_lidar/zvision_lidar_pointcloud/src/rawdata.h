@@ -25,6 +25,7 @@
 
 #include <ros/ros.h>
 #include <ros/package.h>
+#include<zvision_lidar_msgs/zvisionLidarInformation.h>
 #include <zvision_lidar_msgs/zvisionLidarPacket.h>
 #include <zvision_lidar_msgs/zvisionLidarScan.h>
 #include "std_msgs/String.h"
@@ -88,6 +89,12 @@ public:
 
   /*gps time stamp*/
   void getTimeStampFromUdpPkt(const zvision_lidar_msgs::zvisionLidarPacket& pkt, long long int& unix_sec, long long int&  unix_microsec);
+
+  /*ptp/gps lock status*/
+  void getLockStatusFromUdpPkt(const zvision_lidar_msgs::zvisionLidarPacket& pkt, bool& ptp, bool& lock);
+
+  /* apd bias */
+  void getApdBiasFromUdpPkt(const zvision_lidar_msgs::zvisionLidarPacket& pkt,float& bias);
 
   bool cal_init_ok_;
   bool use_lidar_time_;/*0:local time, 1:get the timestamp from udp*/

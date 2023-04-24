@@ -32,6 +32,7 @@
     <param name="z_rot" value="0.0" />
     <param name="use_lidar_time" value="false" />
     <param name="publisher_pointcloud_type_xyzirt" value="false" />
+    <param name="publisher_frame_info" value="false" />
   </node>
 </group>
 
@@ -69,6 +70,7 @@
     <param name="z_rot" value="0.0" />
     <param name="use_lidar_time" value="false" />
     <param name="publisher_pointcloud_type_xyzirt" value="false" />
+    <param name="publisher_frame_info" value="false" />
   </node>
 </group>
 

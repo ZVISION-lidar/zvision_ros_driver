@@ -36,6 +36,7 @@
     <param name="use_blue_gold_color_scheme" value="false"/>
     <param name="publisher_pointcloud_type_xyzirt" value="true" />
     <param name="dynamic_reconfigure_server" value="false" />
+    <param name="publisher_frame_info" value="false" />
   </node>
 </group>
 
@@ -77,6 +78,7 @@
     <param name="use_blue_gold_color_scheme" value="false"/>
     <param name="publisher_pointcloud_type_xyzirt" value="true" />
     <param name="dynamic_reconfigure_server" value="false" />
+    <param name="publisher_frame_info" value="false" />
   </node>
 </group>
   

@@ -9,6 +9,7 @@
   <arg name="use_blue_gold_color_scheme" default="false" />
   <arg name="publisher_pointcloud_type_xyzirt" default="false" />
   <arg name="dynamic_reconfigure_server" default="false" />
+  <arg name="publisher_frame_info" default="false" />
 
   <!-- load driver nodelet into it (udp packets)-->
   <node pkg="zvision_lidar_driver" type="zvision_lidar_node" name="zvision_lidar_node_driver"
@@ -44,6 +45,7 @@
     <param name="use_blue_gold_color_scheme" value="$(arg use_blue_gold_color_scheme)"/>
     <param name="publisher_pointcloud_type_xyzirt" value="$(arg publisher_pointcloud_type_xyzirt)" />
     <param name="dynamic_reconfigure_server" value="$(arg dynamic_reconfigure_server)" />
+    <param name="publisher_frame_info" value="$(arg publisher_frame_info)" />
   </node>
   
   <node if="$(arg use_blue_gold_color_scheme)" name="rviz" pkg="rviz" type="rviz"  args="-d $(find zvision_lidar_pointcloud)/rviz_cfg/zvision_lidar_colored.rviz" />

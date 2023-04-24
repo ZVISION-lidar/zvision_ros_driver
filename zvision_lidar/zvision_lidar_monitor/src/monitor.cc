@@ -258,7 +258,7 @@ int zvisionLidarMonitor::parsingPacket(zvision_lidar_msgs::zvisionLidarHeartbeat
       uint8_t flg = 0x01;
       for(int i = 0;i<8;i++){
         uint8_t bit_i = flg<<i;
-        if(bit_i & ht->sys_diag_status  == bit_i){
+        if((bit_i & ht->sys_diag_status)  == bit_i){
           msg += diag_sys_strs[i] + ", ";
         }
         if(i >= 5)
@@ -288,7 +288,7 @@ int zvisionLidarMonitor::parsingPacket(zvision_lidar_msgs::zvisionLidarHeartbeat
       uint32_t flg = 0x01;
       for(int i = 0;i<32;i++){
         uint32_t bit_i = flg<<i;
-          if(bit_i & ht->hardware_diag_status  == bit_i){
+          if((bit_i & ht->hardware_diag_status)  == bit_i){
               msg += diag_hw_strs[i] + " error, ";
           }
           if(i >= 15)
@@ -306,13 +306,13 @@ int zvisionLidarMonitor::parsingPacket(zvision_lidar_msgs::zvisionLidarHeartbeat
     offset++;
     {
       info += "ptp sync status: ";
-      if(ht->ptp_sync_status & 0x01 == 0x01)
+      if((ht->ptp_sync_status & 0x01) == 0x01)
         info += "lock";
       else
         info += "unlock";
       info +="\n";
       info += "dirty check: ";
-      if(ht->ptp_sync_status & 0x10 == 0x10)
+      if((ht->ptp_sync_status & 0x10) == 0x10)
         info += "dirty";
       else
         info += "clear";

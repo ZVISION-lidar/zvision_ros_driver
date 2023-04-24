@@ -478,6 +478,24 @@ namespace zvision {
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////
+	int TcpClient::GetAvailableBytesLen() {
+		int bytesRdy = 0;
+
+		char tempbuf[BUFFERSIZE];
+		int timeout = 1;
+		setsockopt(this->socket_, SOL_SOCKET, SO_RCVTIMEO, (const char *)&timeout, sizeof(timeout));
+#ifdef WIN32
+		bytesRdy = recv(this->socket_, tempbuf, sizeof(tempbuf), MSG_PEEK | MSG_PUSH_IMMEDIATE);
+#else
+		bytesRdy = recv(this->socket_, tempbuf, sizeof(tempbuf), MSG_PEEK | MSG_DONTWAIT);
+#endif
+
+		setsockopt(this->socket_, SOL_SOCKET, SO_RCVTIMEO, (const char *)&this->recv_timeout_ms_, sizeof(this->recv_timeout_ms_));
+
+		return bytesRdy;
+	}
+
+    //////////////////////////////////////////////////////////////////////////////////////////////
     int TcpClient::SyncRecv(std::string& data, int len)
     {
         int flags = 0;

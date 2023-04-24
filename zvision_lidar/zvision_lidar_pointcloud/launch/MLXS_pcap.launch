@@ -1,10 +1,15 @@
 <launch>
   <arg name="manager" default="zvision_lidar_nodelet_manager" />
   <arg name="model" default="MLXS" />
-  <arg name="device_ip" default="192.168.10.108" />
+  <arg name="device_ip" default="168.192.108.10" />
   <arg name="udp_port" default="2368" />
   <arg name="angle_path" default="$(find zvision_lidar_pointcloud)/data/MLXS_Default.cal" />
   <arg name="pcap" default="$(find zvision_lidar_pointcloud)/data/MLXS_Default.pcap" />
+
+  <arg name="publisher_pointcloud_type_xyzi" default="true" />
+  <arg name="use_blue_gold_color_scheme" default="false" />
+  <arg name="publisher_pointcloud_type_xyzirt" default="false" />
+  <arg name="use_lidar_line_id" default="false" />
 
   <!-- start nodelet manager -->
   <node pkg="nodelet" type="nodelet" name="$(arg manager)" args="manager" output="screen"/>
@@ -31,7 +36,15 @@
     <param name="y_rot" value="0.0" />
     <param name="z_rot" value="0.0" />
     <param name="use_lidar_time" value="false" />
+    <param name="publisher_pointcloud_type_xyzi" value="$(arg publisher_pointcloud_type_xyzi)" />
+    <param name="use_blue_gold_color_scheme" value="$(arg use_blue_gold_color_scheme)"/>
+    <param name="publisher_pointcloud_type_xyzirt" value="$(arg publisher_pointcloud_type_xyzirt)" />
+    <param name="use_lidar_line_id" value="$(arg use_lidar_line_id)" />
   </node>
   
-  <node name="rviz" pkg="rviz" type="rviz"  args="-d $(find zvision_lidar_pointcloud)/rviz_cfg/zvision_lidar.rviz" />
+  <node if="$(arg use_blue_gold_color_scheme)" name="rviz" pkg="rviz" type="rviz"  args="-d $(find zvision_lidar_pointcloud)/rviz_cfg/zvision_lidar_colored.rviz" />
+  <group unless="$(arg use_blue_gold_color_scheme)">
+    <node if="$(arg publisher_pointcloud_type_xyzirt)" name="rviz" pkg="rviz" type="rviz"  args="-d $(find zvision_lidar_pointcloud)/rviz_cfg/zvision_lidar_xyzirt.rviz" />
+    <node unless="$(arg publisher_pointcloud_type_xyzirt)" name="rviz" pkg="rviz" type="rviz"  args="-d $(find zvision_lidar_pointcloud)/rviz_cfg/zvision_lidar.rviz" />
+  </group>
 </launch>

@@ -34,11 +34,433 @@ namespace zvision {
 
     bool LidarTools::CheckDeviceRet(std::string ret)
     {
-        return (0x00 == ret[2]) && (0x00 == ret[3]);
+        if(ret.size() == 4)
+        {
+            return (0x00 == ret[2]) && (0x00 == ret[3]);
+        }
+        else if(ret.size() == 7)
+        {
+            // check flg
+            if(ret[4] != 0x00)
+                return false;
+            // check sum
+            uint16_t val = GetCheckSum(ret.substr(0,5));
+            uint16_t chk_sum = ret[5] << 8 | ret[6];
+            return val == chk_sum;
+        }
+
+        return false;
+    }
+
+    int LidarTools::GetOnlineML30SPlusB1CalibrationData(std::string ip, CalibrationData& cal)
+    {
+        cal.model = Unknown;
+        TcpClient client(1000, 1000, 1000);
+        int ret = client.Connect(ip);
+        if (ret)
+        {
+            ROS_ERROR_STREAM("Connect error: " << client.GetSysErrorCode());
+            return -1;
+        }
+
+        // set send cmd
+        const int send_len = 9;
+        char mlxs_cmd[send_len] = { (char)0xBA, (char)0x00, (char)0x01, (char)0x00 , (char)0x02, (char)0x0B, (char)0x02, (char)0x00, (char)0x00 };
+        uint16_t chk_sum = GetCheckSum(std::string(mlxs_cmd, 7));
+        mlxs_cmd[7] = (chk_sum >> 8) & 0xFF;
+        mlxs_cmd[8] = chk_sum & 0xFF;
+        std::string cmd(mlxs_cmd, send_len);
+        // send cmd
+        if (client.SyncSend(cmd, send_len))
+        {
+            ROS_ERROR_STREAM("Send cali cmd error: " << client.GetSysErrorCode());
+            return -1;
+        }
+        // get ret part 1
+        const int ret_len1 = 5;
+        std::string recv_ret1(ret_len1, 'x');
+        if (client.SyncRecv(recv_ret1, ret_len1))
+        {
+            ROS_ERROR_STREAM("Receive cali ret1 error: " << client.GetSysErrorCode());
+            return -1;
+        }
+        // get ret part 2 len
+        uint16_t ret_len2 = 0;
+        NetworkToHostShort((uint8_t*)(recv_ret1.c_str() +2), (char*)(&ret_len2));
+        if (ret_len2 != 0x02 && ret_len2 != 0x06)
+        {
+            int len = client.GetAvailableBytesLen();
+            if (len > 0) {
+                std::string temp(len, 'x');
+                client.SyncRecv(temp, len);
+            }
+            ROS_ERROR_STREAM("Get cali ret error, data len not valid:" << ret_len2);
+            return -1;
+        }
+        // get ret part 2
+        std::string recv_ret2(ret_len2, 'x');
+        if (client.SyncRecv(recv_ret2, ret_len2))
+        {
+            ROS_ERROR_STREAM("Receive cali ret2 error: " << client.GetSysErrorCode());
+            return -1;
+        }
+        // recv ret data
+        std::string recv_ret = recv_ret1 + recv_ret2;
+        // check ret
+        bool check = true;
+        {
+            int recv_ret_len = recv_ret.size();
+            // check flg
+            if (recv_ret[4] != 0x00)
+                check = false;
+            // check sum
+            if (check)
+            {
+                uint16_t val = GetCheckSum(recv_ret.substr(0, recv_ret_len - 2));
+                uint16_t chk_sum = uint8_t(recv_ret[recv_ret_len-2]) << 8 | uint8_t(recv_ret[recv_ret_len-1]);
+                check = (val == chk_sum);
+            }
+        }
+
+        if (!check)
+        {
+            ROS_ERROR_STREAM("Check cali ret error:" << client.GetSysErrorCode());
+            return -1;
+        }
+
+        // get cali data total len
+        int total_bytes_len = 0;
+        NetworkToHost((uint8_t*)(recv_ret.c_str() + 5), (char*)(&total_bytes_len));
+
+        std::vector<std::string> pkts;
+        const int cali_header_len = 30;
+        const int chk_sum_len = 2;
+        const int new_cali_pkt_data_len = 1024;
+        std::string new_cali_header_str = "CAL30S+A1";
+        int received_bytes_len = 0;
+        std::string cali_recv_buf_left;
+        while (received_bytes_len < total_bytes_len)
+        {
+            // get cali header
+            std::string header_recv(cali_header_len, 'x');
+            int ret = client.SyncRecv(header_recv, cali_header_len);
+            if (ret)
+            {
+                ROS_ERROR_STREAM("Receive calibration header error.");
+                return -1;
+            }
+
+            // get cali data len
+            uint16_t data_len = 0;
+            NetworkToHostShort((uint8_t*)header_recv.data() + (cali_header_len - chk_sum_len), (char*)(&data_len));
+            if (data_len - chk_sum_len < 0 )
+            {
+                ROS_ERROR_STREAM("Check calibration header error.");
+                return -1;
+            }
+
+            // get cali data and checksum
+            std::string data_recv(data_len, 'x');
+            ret = client.SyncRecv(data_recv, data_len);
+            if (ret)
+            {
+                ROS_ERROR_STREAM("Receive calibration data error.");
+                return -1;
+            }
+
+            // get packet check sum
+            uint16_t pkt_chk = 0;
+            NetworkToHostShort((uint8_t*)data_recv.data() + (data_len - chk_sum_len), (char*)(&pkt_chk));
+            // get packet data
+            std::string cali_data = data_recv.substr(0, data_len - chk_sum_len);
+            std::string cali_pkt = header_recv + cali_data;
+            // check
+            uint16_t chk = GetCheckSum(cali_pkt);
+            if (chk != pkt_chk)
+            {
+                ROS_ERROR_STREAM("Check mlxs calibration data error.");
+                return -1;
+            }
+
+            // check cali data
+            {
+                unsigned char check_all_00 = 0x00;
+                unsigned char check_all_ff = 0xFF;
+                for (int i = 0; i < cali_data.size(); i++)
+                {
+                    check_all_00 |= cali_data[i];
+                    check_all_ff &= cali_data[i];
+                }
+                if (0x00 == check_all_00)
+                {
+                    ROS_ERROR_STREAM("Check calibration data error, data is all 0x00.");
+                    return -1;
+                }
+                if (0xFF == check_all_ff)
+                {
+                    ROS_ERROR_STREAM("Check calibration data error, data is all 0xFF.");
+                    return -1;
+                }
+            }
+
+            // get pkt header information
+            char header_info[7] = { (char)0x00, (char)0x00, (char)0x00, (char)0x01 , (char)0x00, (char)0x00, (char)0x00};
+            header_info[4] = header_recv.at(25);
+            // regenerate cali pkts
+            std::string data_buf = cali_recv_buf_left + cali_data;
+            int pkt_cnt = data_buf.size() / new_cali_pkt_data_len;
+            int bytes_left = data_buf.size() % new_cali_pkt_data_len;
+            if (pkt_cnt>0)
+            {
+                for (int i = 0;i< pkt_cnt;i++)
+                {
+                    uint16_t cur_pkt_cnt = pkts.size();
+                    header_info[0] = (cur_pkt_cnt >> 8) & 0xFF;
+                    header_info[1] = cur_pkt_cnt & 0xFF;
+                    std::string new_data = data_buf.substr(new_cali_pkt_data_len*i, new_cali_pkt_data_len);
+                    std::string new_pkt = new_cali_header_str + std::string(header_info, 7) + new_data; // 9 + 7 + 1024
+                    pkts.push_back(new_pkt);
+                }
+            }
+
+            // update bytes buffer left
+            cali_recv_buf_left = std::string();
+            if (bytes_left > 0)
+                cali_recv_buf_left = data_buf.substr(pkt_cnt* new_cali_pkt_data_len, bytes_left);
+
+            // check
+            received_bytes_len += (cali_header_len + data_len);
+            if (received_bytes_len >= total_bytes_len)
+            {
+                break;
+            }
+        }
+
+        // final check
+        // we should get 100/200/400 packets
+        if (pkts.size() != 100 && pkts.size() != 200 && pkts.size() != 400)
+        {
+            ROS_ERROR_STREAM("Get calibration data error.");
+            return -1;
+        }
+
+        //  compute cali data
+        for (int i = 0; i < pkts.size(); i++)
+        {
+            char* cal_data_ = (char*)pkts[i].c_str() + 16;
+            int network_data = 0;
+            int host_data = 0;
+            float* pfloat_data = reinterpret_cast<float *>(&host_data);
+            for (int j = 0; j < 128 * 2; j++)
+            {
+                memcpy(&network_data, cal_data_ + j * 4 , 4); // 4 bytes per data, azimuth, elevation, 16 bytes header
+                host_data = ntohl(network_data);
+                cal.data.push_back(*pfloat_data);
+            }
+        }
+
+		{
+			std::vector<float> dst;
+			dst.resize(cal.data.size(),.0f);
+			int id_h = 0;
+			int id_l = cal.data.size() / 2;
+			for (int i = 0; i < cal.data.size(); i++) {
+				if (i / 8 % 2 == 0) {
+					dst.at(id_h) = cal.data[i];
+					id_h++;
+				}
+				else {
+					dst.at(id_l) = cal.data[i];
+					id_l++;
+				}
+			}
+			cal.data = dst;
+		}
+        cal.model = ML30SPlusB1;
+        return 0;
+    }
+
+    int LidarTools::GetOnlineMLXSCalibrationData(std::string ip, CalibrationData& cal)
+    {
+        // set send cmd
+        const int send_len = 9;
+        char mlxs_cmd[send_len] = { (char)0xBA, (char)0x00, (char)0x00, (char)0x00 , (char)0x02, (char)0x0B, (char)0x02, (char)0x00, (char)0x00};
+        uint16_t chk_sum = GetCheckSum(std::string(mlxs_cmd, 8));
+        mlxs_cmd[7] = (chk_sum>>8) & 0xFF;
+        mlxs_cmd[8] = chk_sum & 0xFF;
+        std::string cmd(mlxs_cmd,send_len);
+
+        cal.model = Unknown;
+        TcpClient client(1000, 1000, 1000);
+        int ret = client.Connect(ip);
+        if (ret)
+        {
+            ROS_ERROR_STREAM("Connect error: " << client.GetSysErrorCode());
+            return -1;
+        }
+
+        if (client.SyncSend(cmd, send_len))
+        {
+            ROS_ERROR_STREAM("Send cali cmd error: " << client.GetSysErrorCode());
+            client.Close();
+            return -1;
+        }
+        const int recv_len = 7;
+        std::string recv(recv_len, 'x');
+        if (client.SyncRecv(recv, recv_len))
+        {
+            ROS_ERROR_STREAM("Receive cali ret error: " << client.GetSysErrorCode());
+            client.Close();
+            return -1;
+        }
+
+        if (!CheckDeviceRet(recv))
+        {
+            ROS_ERROR_STREAM("Check cali ret error: " << client.GetSysErrorCode());
+            client.Close();
+            return -1;
+        }
+
+        // get mlxs cali data
+        uint32_t received_bytes_len = 0;
+        uint32_t total_len = (36000 * 3 * 2);
+        uint32_t total_bytes_len = total_len * 4;
+        cal.model = MLXS;
+
+        const int cali_header_len = 5;
+        const int chk_sum_len = 2;
+        std::vector<float>& data = cal.data;
+        data.clear();
+        // cali packet tail
+        std::string cali_recv_left;
+        while(received_bytes_len < total_bytes_len )
+        {
+            // receive calibration header
+            std::string header_recv(cali_header_len, 'x');
+            int ret = client.SyncRecv(header_recv, cali_header_len);
+            if (ret)
+            {
+                ROS_ERROR_STREAM("Receive mlxs calibration header error\n");
+                client.Close();
+                return -1;
+            }
+            // chech cali header
+            uint8_t* pheader_recv = (uint8_t*)header_recv.data();
+            if( (  *(pheader_recv + 0)!=0xBA) \
+                || (*(pheader_recv + 1)!=0xAC) \
+                || (*(pheader_recv + 4)!=0x00))
+            {
+                ROS_ERROR_STREAM("Check mlxs calibration header error\n");
+                client.Close();
+                return -1;
+            }
+
+            // get cali data and checksum
+            uint16_t data_len = 0;
+            NetworkToHostShort((uint8_t*)header_recv.data() + 2,(char*)(&data_len));
+            std::string data_recv(data_len, 'x');
+            ret = client.SyncRecv(data_recv, data_len);
+            if (ret)
+            {
+                ROS_ERROR_STREAM("Receive mlxs calibration data error\n");
+                client.Close();
+                return -1;
+            }
+
+            // get packet check sum
+            uint16_t pkt_chk = 0;
+            NetworkToHostShort((uint8_t*)data_recv.data() +data_len - chk_sum_len, (char*)(&pkt_chk));
+            // get packet data
+            std::string cali_recv = data_recv.substr(0, data_len - chk_sum_len);
+            std::string cali_pkt = header_recv + cali_recv;
+            // check
+            uint16_t chk = GetCheckSum(cali_pkt);
+            if(chk != pkt_chk)
+            {
+                ROS_ERROR_STREAM("Check mlxs calibration data error\n");
+                client.Close();
+                return -1;
+            }
+
+            // check cali data
+            {
+                unsigned char check_all_00 = 0x00;
+                unsigned char check_all_ff = 0xFF;
+                for (int i = 0; i < cali_recv.size(); i++)
+                {
+                    check_all_00 |= cali_recv[i];
+                    check_all_ff &= cali_recv[i];
+                }
+                if (0x00 == check_all_00)
+                {
+                    ROS_ERROR_STREAM("Check calibration data error, data is all 0x00.\n");
+                    client.Close();
+                    return -1;
+                }
+                if (0xFF == check_all_ff)
+                {
+                    ROS_ERROR_STREAM("Check calibration data error, data is all 0xFF.\n");
+                    client.Close();
+                    return -1;
+                }
+            }
+            // add data left over by last cali packet
+            if(cali_recv_left.size())
+            {
+                cali_recv = cali_recv_left + cali_recv;
+                cali_recv_left = std::string();
+            }
+            // get cali packet tail
+            int fcnt = cali_recv.size() / 4;
+            int str_left = cali_recv.size() % 4;
+            if(str_left>0)
+            {
+                cali_recv_left = cali_recv.substr(fcnt*4, str_left);
+                cali_recv = cali_recv.substr(0, fcnt*4);
+            }
+
+            // parsing cali data
+            int network_data = 0;
+            int host_data = 0;
+            float* pfloat_data = reinterpret_cast<float *>(&host_data);
+            unsigned char* pcali = (unsigned char *)cali_recv.c_str();
+            for(int i = 0;i<fcnt;i++)
+            {
+                memcpy(&network_data, pcali + i * 4, 4);
+                host_data = ntohl(network_data);
+                data.push_back(*pfloat_data);
+            }
+            // check
+            received_bytes_len += cali_recv.size();
+            if( received_bytes_len >= total_bytes_len )
+            {
+                // printf("received_bytes_len: %d\n",received_bytes_len);
+               break;
+            }
+
+            std::this_thread::sleep_for(std::chrono::microseconds(110));
+        }
+
+        // final check
+        if(data.size() != total_len)
+        {
+            ROS_ERROR_STREAM("Get mlxs calibration data error\n");
+            return -1;
+        }
+
+        return 0;
     }
 
     int LidarTools::GetOnlineCalibrationData(std::string ip, CalibrationData& cal, LidarType tp)
     {
+        if(tp == LidarType::MLXS )
+        {
+            return GetOnlineMLXSCalibrationData(ip, cal);
+        }else if(tp == LidarType::ML30SPlusB1 )
+        {
+            return GetOnlineML30SPlusB1CalibrationData(ip, cal);
+        }
+
         //std::string ec;
         //const int ppf = 256000; // points per frame, 256000 reserved
         const int ppk = 128; // points per cal udp packet
@@ -581,7 +1003,7 @@ namespace zvision {
                 point_cal.sin_azi = std::sin(azi);
             }
         }
-        else if(ML30SPlusA1 == cal.model){
+        else if(ML30SPlusA1 == cal.model || ML30SPlusB1 == cal.model){
             const int start = 4;
 			int fov_index[start] = { 0, 1, 2, 3 };
 			for (unsigned int i = 0; i < cal.data.size() / 2; ++i)
@@ -664,6 +1086,9 @@ namespace zvision {
         case ML30SPlusA1:
             dev_string = "ML30S+A1";
             break;
+        case ML30SPlusB1:
+            dev_string = "ML30S+B1";
+            break;
         case MLX:
             dev_string = "MLX";
             break;
@@ -688,6 +1113,8 @@ namespace zvision {
             dev_ty = LidarType::ML30SA1;
         else if(tp == "ML30S+A1")
             dev_ty = LidarType::ML30SPlusA1;
+        else if(tp == "ML30S+B1")
+            dev_ty = LidarType::ML30SPlusB1;
         else if(tp == "MLX")
             dev_ty = LidarType::MLX;
         else if(tp == "MLXA1")
@@ -707,7 +1134,7 @@ namespace zvision {
             fovs = 3;
         else if(LidarType::ML30SA1 == cal_lut.model)
             fovs = 8;
-        else if(LidarType::ML30SPlusA1 == cal_lut.model)
+        else if(LidarType::ML30SPlusA1 == cal_lut.model || LidarType::ML30SPlusB1 == cal_lut.model)
             fovs = 8;
         else if(LidarType::MLX == cal_lut.model)
             fovs = 3;
@@ -891,4 +1318,14 @@ namespace zvision {
         return client.Connect(ip) == 0;
     }
 
+    uint16_t LidarTools::GetCheckSum(std::string str)
+    {
+        uint32_t check_sum = 0;
+        uint8_t* pstr = (uint8_t* )str.data();
+        for(int i = 0;i<str.size();i++)
+            check_sum += *(pstr+i) &0xFF;
+
+        uint16_t ret = check_sum & 0xFFFF;
+        return ret;
+    }
 }

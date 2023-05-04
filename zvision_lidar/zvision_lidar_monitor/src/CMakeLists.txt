@@ -10,15 +10,20 @@ target_link_libraries(zvision_lidar_monitor_nodelet
   ${catkin_LIBRARIES}
 )
 
-add_executable(demo_monitor demo_monitor.cpp)
+add_executable(demo_monitor_pub demo_monitor_pub.cpp)
+add_executable(demo_monitor_sub demo_monitor_sub.cpp)
 add_executable(demo_frame_info demo_frame_info.cpp)
 
 if(catkin_EXPORTED_TARGETS)
   add_dependencies(zvision_lidar_monitor ${catkin_EXPORTED_TARGETS})
 endif()
 
-target_link_libraries(demo_monitor
+target_link_libraries(demo_monitor_pub
     zvision_lidar_monitor
+	${catkin_LIBRARIES}
+)
+
+target_link_libraries(demo_monitor_sub
 	${catkin_LIBRARIES}
 )
 
@@ -30,7 +35,12 @@ install(TARGETS zvision_lidar_monitor
         LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 )
 
-install(TARGETS demo_monitor
+install(TARGETS demo_monitor_pub
+        RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+        COMPONENT main
+)
+
+install(TARGETS demo_monitor_sub
         RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
         COMPONENT main
 )

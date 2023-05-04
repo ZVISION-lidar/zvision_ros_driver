@@ -3,11 +3,19 @@
 
 > Start running the demo
 >
+> 1.1 We have two ways to publish heartbeat information.
 > ```tex
-> # 1. monitor lidar heartbeat (publisher)
+> # use nodelet manager
 > roslaunch zvision_lidar_monitor ml30sb2_monitor.launch
-> # 2. run monitor demo (subscriber)
-> rosrun zvision_lidar_monitor demo_monitor
+> ```
+> or
+> ```tex
+> # run node
+> rosrun zvision_lidar_monitor demo_monitor_pub
+> ```
+> 1.2 Running heartbeat subscription node.
+> ```tex
+> rosrun zvision_lidar_monitor demo_monitor_sub
 > ```
 >
 > If the operation is successful, as shown in the following figure

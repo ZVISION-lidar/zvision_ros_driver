@@ -1,0 +1,59 @@
+<launch>
+  <arg name="manager" default="zvision_lidar_nodelet_manager" />
+  <arg name="model" default="ML30SA1" />
+  <arg name="device_ip" default="192.168.1.200" />
+  <arg name="udp_port" default="2368" />
+  <arg name="angle_path"1858 default="$(find zvision_lidar_pointcloud)/data/ML30S_A1_Default.cal" />
+  <arg name="pcap" default="$(find zvision_lidar_pointcloud)/data/ML30S_A1_Default.pcap" />
+  <arg name="use_blue_gold_color_scheme" default="false" />
+  
+  <arg name="use_pointcloud_status_diagnose" default="true" />
+  <arg name="statistic_frame_num" default="100" />
+  <arg name="roi_sample_lines" default="10" />
+  <arg name="roi_interval" default="10" />
+  <arg name="min_roi_pointnum" default="60" />
+  <arg name="z_height" default="-0.58" />
+  <arg name="roi_z_diff_threshold" default="0.1" />
+  <arg name="error_rate_threshold" default="0.6" />
+
+  <!-- load driver nodelet into it (udp packets)-->
+  <node pkg="zvision_lidar_driver" type="zvision_lidar_node" name="zvision_lidar_node_driver"
+      output="screen">
+    <param name="model" value="$(arg model)"/>
+    <param name="device_ip" value="$(arg device_ip)" />
+    <param name="udp_port" value="$(arg udp_port)" />
+	  <param name="pcap" value="$(arg pcap)" />
+  </node>
+
+  <!-- load driver nodelet into it (udp packet to pointcloud)-->
+  <node pkg="zvision_lidar_pointcloud" type="zvision_lidar_cloud_node" name="zvision_lidar_cloud_node_cloud"
+      output="screen">
+    <param name="model" value="$(arg model)"/>
+    <param name="angle_path" value="$(arg angle_path)" />
+    <param name="device_ip" value="$(arg device_ip)" />
+    <param name="x_tra" value="0.0" />
+    <param name="y_tra" value="0.0" />
+    <param name="z_tra" value="0.0" />
+    <param name="x_rot" value="0.0" />
+    <param name="y_rot" value="0.0" />
+    <param name="z_rot" value="0.0" />
+    <param name="use_lidar_time" value="false" />
+    <param name="use_outlier_removal" value="false"/>
+    <param name="outlier_th" value="0.05"/>
+    <param name="use_blue_gold_color_scheme" value="$(arg use_blue_gold_color_scheme)"/>
+
+    <param name="use_pointcloud_status_diagnose" value="$(arg use_pointcloud_status_diagnose)"/>
+    <param name="statistic_frame_num" value="$(arg statistic_frame_num)"/>
+    <param name="roi_sample_lines" value="$(arg roi_sample_lines)"/>
+    <param name="roi_interval" value="$(arg roi_interval)"/>
+    <param name="min_roi_pointnum" value="$(arg min_roi_pointnum)"/>
+    <param name="z_height" value="$(arg z_height)"/>
+    <param name="roi_z_diff_threshold" value="$(arg roi_z_diff_threshold)"/>
+    <param name="error_rate_threshold" value="$(arg error_rate_threshold)"/>
+  </node>
+  
+  
+  <node if="$(arg use_blue_gold_color_scheme)" name="rviz" pkg="rviz" type="rviz"  args="-d $(find zvision_lidar_pointcloud)/rviz_cfg/zvision_lidar_colored.rviz" />
+  <node unless="$(arg use_blue_gold_color_scheme)" name="rviz" pkg="rviz" type="rviz"  args="-d $(find zvision_lidar_pointcloud)/rviz_cfg/zvision_lidar.rviz" />
+
+</launch>

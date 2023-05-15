@@ -90,13 +90,3 @@ In the launch file, we could set the parameter (timestamp_type) to fill PointClo
 | downsample_cfg_path | path of downsample config file                               | only support for lidar ML30SA1                               | If the driver fails to open the file,it will print "Open downsample file failed" in the console.<br />if the value is set to "", the driver will not downsampling the pointcloud. |
 | use_lidar_line_id   | lidar line id                                                | only support for lidar ML30SA1 and point type PointXYZIRT    | false: R(ring) expressed lidar fov id<br/>true:  R expressed lidar point line id. |
 
-
-
-
-
-
-
-
-
-
-

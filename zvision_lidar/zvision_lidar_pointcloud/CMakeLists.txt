@@ -40,16 +40,3 @@ install(FILES cloud_nodelets.xml
 install(DIRECTORY launch/
         DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
 )
-
-
-
-
-
-
-
-
-
-
-
-
-

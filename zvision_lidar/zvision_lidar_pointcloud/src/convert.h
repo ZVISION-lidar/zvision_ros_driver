@@ -28,6 +28,7 @@
 #include "rawdata.h"
 #include "tools/tools.h"
 #include "zvision_lidar_point_cloud_type.h"
+#include "pointcloud_status.h"
 
 namespace zvision_lidar_pointcloud
 {
@@ -342,7 +343,18 @@ private:
   int line_sample_;
   int* nearest_table_;
   DownsampleType downsample_type_;
+
+  bool use_pointcloud_status_diagnose_;
+  int roi_sample_lines_;
+  int roi_interval_;
+  int min_roi_pointnum_;
+  double z_height_;
+  int statistic_frame_num_;
+  double roi_z_diff_threshold_;
+  double error_rate_threshold_;
+
   std::shared_ptr<std::vector<bool>> downsample_mask_ = nullptr;
+  std::shared_ptr<PointCloudStatus> pointcloud_status_ptr_ = nullptr;
 };
 }  // namespace zvision_lidar_pointcloud
 #endif

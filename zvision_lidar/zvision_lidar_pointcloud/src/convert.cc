@@ -148,7 +148,7 @@ Convert::Convert(ros::NodeHandle node, ros::NodeHandle private_nh) : data_(new z
   private_nh.param("use_outlier_removal", use_outlier_removal_, false);
   ROS_INFO("use_outlier_removal: %c", use_outlier_removal_?'y':'n');
   private_nh.param("outlier_th", outlier_th_, 0.05);
-  ROS_INFO("Outlier points threshold  is, [%.3f].", outlier_th_);
+  ROS_INFO("Outlier points threshold is, [%.3f].", outlier_th_);
   
   private_nh.param("publisher_frame_info", pub_info_, true);
   ROS_INFO("publisher_frame_info: %c", pub_info_?'y':'n');
@@ -170,6 +170,42 @@ Convert::Convert(ros::NodeHandle node, ros::NodeHandle private_nh) : data_(new z
   if(pub_xyzirt_)
     out_xyzirt_ = node.advertise<sensor_msgs::PointCloud2>("zvision_lidar_points_xyzirt", 20);
 
+  // lidar status
+  private_nh.param("use_pointcloud_status_diagnose", use_pointcloud_status_diagnose_, false);
+  ROS_INFO("use_pointcloud_status_diagnose: %c", use_pointcloud_status_diagnose_?'y':'n');
+
+  if(use_pointcloud_status_diagnose_){
+    private_nh.param("statistic_frame_num", statistic_frame_num_, 600);
+    ROS_INFO("Pointcloud_status statistic frame_num is, [%d].", statistic_frame_num_);
+    
+    private_nh.param("roi_sample_lines", roi_sample_lines_, 10);
+    ROS_INFO("Pointcloud_status roi_sample_lines is, [%d].", roi_sample_lines_);
+
+    private_nh.param("roi_interval", roi_interval_, 10);
+    ROS_INFO("Pointcloud_status roi_interval is, [%d].", roi_interval_);
+
+    private_nh.param("min_roi_pointnum", min_roi_pointnum_, 60);
+    ROS_INFO("Pointcloud_status min_roi_pointnum is, [%d].", min_roi_pointnum_);
+
+    private_nh.param("z_height", z_height_, -0.58);
+    ROS_INFO("Pointcloud_status z_height is, [%.3f].", z_height_);
+
+    private_nh.param("roi_z_diff_threshold", roi_z_diff_threshold_, 0.1);
+    ROS_INFO("Pointcloud_status roi_z_diff_threshold  is, [%.3f].", roi_z_diff_threshold_);
+
+    private_nh.param("error_rate_threshold", error_rate_threshold_, 0.5);
+    ROS_INFO("Pointcloud_status statistic error_rate_threshold is, [%.3f].", error_rate_threshold_);
+
+    pointcloud_status_ptr_.reset(new PointCloudStatus(
+      statistic_frame_num_,
+      roi_sample_lines_, 
+      roi_interval_,
+      min_roi_pointnum_,
+      z_height_,
+      roi_z_diff_threshold_,
+      error_rate_threshold_
+    ));
+  } 
   //srv_question
   private_nh.param("dynamic_reconfigure_server", pub_cfg_srv_, true);
   ROS_INFO("dynamic_reconfigure_server: %c", pub_cfg_srv_?'y':'n');
@@ -180,7 +216,7 @@ Convert::Convert(ros::NodeHandle node, ros::NodeHandle private_nh) : data_(new z
 
   data_->loadConfigFile(node, private_nh);
   nearest_table_ = nullptr;
-//   if(data_->cal_init_ok_) nearest_table_ = get_nearest_point_index();
+  //   if(data_->cal_init_ok_) nearest_table_ = get_nearest_point_index();
   // subscribe to zvisionlidarScan packets
   zvision_lidar_scan_ = node.subscribe("zvision_lidar_packets", 20, &Convert::processScan, (Convert*)this,
                                  ros::TransportHints().tcpNoDelay(true));
@@ -198,6 +234,24 @@ void Convert::callback(zvision_lidar_pointcloud::CloudNodeConfig& config, uint32
   data_->y_rotation = config.y_rotation / 180.0 * M_PI;
   data_->z_rotation = config.z_rotation / 180.0 * M_PI;
   // config_.time_offset = config.time_offset;
+
+  printf("pointcloud_status parameter:%d %d %d %d %f %f %f\n", 
+      config.roi_sample_lines, 
+      config.roi_interval,
+      config.statistic_frame_num,
+      config.min_roi_pointnum,
+      config.z_height,
+      config.roi_z_diff_threshold,
+      config.error_rate_threshold);
+  pointcloud_status_ptr_->set_threshold(
+    config.statistic_frame_num,
+    config.roi_sample_lines,
+    config.roi_interval,
+    config.min_roi_pointnum,
+    config.z_height,
+    config.roi_z_diff_threshold,
+    config.error_rate_threshold
+  );
 }
 
 /** @brief Callback for raw scan messages. *///IMPORTANT
@@ -270,7 +324,22 @@ void Convert::processScan(const zvision_lidar_msgs::zvisionLidarScan::ConstPtr& 
       outPoints->header.stamp = time_from_pkt_s * 1000000 + time_from_pkt_us;
   }
 
-   // publish lidar information
+  // parsing packets
+  pcl::PointCloud<ZvPointXYZIRT>::Ptr points_xyzirt(new pcl::PointCloud<ZvPointXYZIRT>);
+  points_xyzirt->resize(outPoints->size());
+  for (size_t i = 0; i < scanMsg->packets.size(); ++i)
+  {
+      data_->unpack(scanMsg->packets[i], points_xyzirt);
+  }
+
+  for(int i = 0;i<outPoints->size();i++){
+    outPoints->at(i).x = points_xyzirt->at(i).x;
+    outPoints->at(i).y = points_xyzirt->at(i).y;
+    outPoints->at(i).z = points_xyzirt->at(i).z;
+    outPoints->at(i).intensity = points_xyzirt->at(i).intensity;
+  }
+  
+  // publish lidar information
   if(pub_info_)
   {
     zvision_lidar_msgs::zvisionLidarInformationPtr info(new zvision_lidar_msgs::zvisionLidarInformation);
@@ -286,22 +355,10 @@ void Convert::processScan(const zvision_lidar_msgs::zvisionLidarScan::ConstPtr& 
     uint32_t sec = outPoints->header.stamp / 1000000;
     uint32_t nsec = (outPoints->header.stamp%1000000) * 1000;
     info->stamp = ros::Time(sec, nsec);
+    if(use_pointcloud_status_diagnose_){
+      info->is_pc_status_error = pointcloud_status_ptr_->check_status(outPoints);
+    }
     out_info_.publish(info);
-  }
-
-  // parsing packets
-  pcl::PointCloud<ZvPointXYZIRT>::Ptr points_xyzirt(new pcl::PointCloud<ZvPointXYZIRT>);
-  points_xyzirt->resize(outPoints->size());
-  for (size_t i = 0; i < scanMsg->packets.size(); ++i)
-  {
-      data_->unpack(scanMsg->packets[i], points_xyzirt);
-  }
-
-  for(int i = 0;i<outPoints->size();i++){
-    outPoints->at(i).x = points_xyzirt->at(i).x;
-    outPoints->at(i).y = points_xyzirt->at(i).y;
-    outPoints->at(i).z = points_xyzirt->at(i).z;
-    outPoints->at(i).intensity = points_xyzirt->at(i).intensity;
   }
 
   pcl::PointCloud<pcl::PointXYZI>::Ptr  outputPtr(new pcl::PointCloud<pcl::PointXYZI>);

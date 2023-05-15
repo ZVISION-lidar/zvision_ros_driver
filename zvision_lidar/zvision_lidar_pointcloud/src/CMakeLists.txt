@@ -4,7 +4,7 @@ target_link_libraries(zvision_lidar_data
     ${catkin_LIBRARIES}
     ${libpcap_LIBRARIES})
 
-add_library(zvision_lidar_point convert.cc)
+add_library(zvision_lidar_point convert.cc pointcloud_status.cc)
 target_link_libraries(zvision_lidar_point
     zvision_lidar_data
     ${catkin_LIBRARIES})

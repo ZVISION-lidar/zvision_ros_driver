@@ -14,6 +14,9 @@ add_executable(demo_monitor_pub demo_monitor_pub.cpp)
 add_executable(demo_monitor_sub demo_monitor_sub.cpp)
 add_executable(demo_frame_info demo_frame_info.cpp)
 
+add_dependencies(demo_monitor_sub zvision_lidar_msgs_gencpp)
+add_dependencies(demo_frame_info zvision_lidar_msgs_gencpp)
+
 if(catkin_EXPORTED_TARGETS)
   add_dependencies(zvision_lidar_monitor ${catkin_EXPORTED_TARGETS})
 endif()

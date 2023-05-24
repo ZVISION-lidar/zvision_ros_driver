@@ -234,24 +234,26 @@ void Convert::callback(zvision_lidar_pointcloud::CloudNodeConfig& config, uint32
   data_->y_rotation = config.y_rotation / 180.0 * M_PI;
   data_->z_rotation = config.z_rotation / 180.0 * M_PI;
   // config_.time_offset = config.time_offset;
+  if(use_pointcloud_status_diagnose_){
 
-  printf("pointcloud_status parameter:%d %d %d %d %f %f %f\n", 
-      config.roi_sample_lines, 
-      config.roi_interval,
-      config.statistic_frame_num,
-      config.min_roi_pointnum,
-      config.z_height,
-      config.roi_z_diff_threshold,
-      config.error_rate_threshold);
-  pointcloud_status_ptr_->set_threshold(
-    config.statistic_frame_num,
-    config.roi_sample_lines,
-    config.roi_interval,
-    config.min_roi_pointnum,
-    config.z_height,
-    config.roi_z_diff_threshold,
-    config.error_rate_threshold
-  );
+    printf("pointcloud_status parameter:%d %d %d %d %f %f %f\n", 
+        config.roi_sample_lines, 
+        config.roi_interval,
+        config.statistic_frame_num,
+        config.min_roi_pointnum,
+        config.z_height,
+        config.roi_z_diff_threshold,
+        config.error_rate_threshold);
+    pointcloud_status_ptr_->set_threshold(
+        config.statistic_frame_num,
+        config.roi_sample_lines,
+        config.roi_interval,
+        config.min_roi_pointnum,
+        config.z_height,
+        config.roi_z_diff_threshold,
+        config.error_rate_threshold
+    );
+  }
 }
 
 /** @brief Callback for raw scan messages. *///IMPORTANT

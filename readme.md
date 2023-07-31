@@ -1,6 +1,6 @@
 #### 1. Prerequisites
-(1) Install a ubuntu PC. We suggested Ubuntu 14.04, Ubuntu 16.04 and Ubuntu 18.04. Please do not use virtual machine.
-(2) Install ros full-desktop version. We tried Indigo, Kinect and Melodic.
+(1) Install a ubuntu PC. We suggested Ubuntu 14.04, Ubuntu 16.04, Ubuntu 18.04 and Ubuntu 20.04. Please do not use virtual machine.
+(2) Install ros full-desktop version. We tried Indigo, Kinect, Melodic and Noetic.
 (3) Please also install libpcap-dev.
 
 ####  2. Install
@@ -23,16 +23,16 @@ catkin_make
 ```
 #### 3. Configure PC IP
 By default, the ZVISION_LIDAR is configured to **192.168.10.108** as its device IP and **255.255.255.255** as destination IP that it would communicate. The default **LiDAR UDP dst port is 2368**.
-So you need configure your PC IP as a static one **192.168.10.10**.
+So you need configure your PC IP as a static one **192.168.10.10 **.
 
 #### 4. Run online lidar
-We have provide example launch files under zvision_lidar_pointcloud/launch, we can run the launch file to view the point cloud data. For example, if we want to view ML30/ML30SA1 real time data:
+We have provide example launch files under zvision_lidar_pointcloud/launch, we can run the launch file to view the point cloud data. For example, if we want to view ML30PlusB1 real time data:
 (1). Open a new terminal and run:
 
 ```
 cd ~/catkin_ws
 source devel/setup.bash
-roslaunch zvision_lidar_pointcloud ML30SA1.launch
+roslaunch zvision_lidar_pointcloud ML30SPlus_B1.launch
 ```
 
 #### 5. Run offline pcap file
@@ -41,13 +41,13 @@ We can also run the driver to view the offline pcap file:
 ```
 cd ~/catkin_ws
 source devel/setup.bash
-roslaunch zvision_lidar_pointcloud ML30SA1_pcap.launch
+roslaunch zvision_lidar_pointcloud ML30SPlus_B1_pcap.launch
 ```
 Then we can run view the pointcloud via "rviz"
 
 #### 6. About the lidar calibration parameters
 Under "**zvision_lidar_pointcloud/data**" directory, you can find the lidar calibration parameters files for the exact sensor. By default the launch file load the files
-- zvision_lidar_pointcloud/data/ML30SA1_Default.cal
+- zvision_lidar_pointcloud/data/ML30SPlus_Default.cal
 
 
 If you have more than one ZVISIONLIDAR, you can put the data files into "**zvision_lidar_pointcloud/data**" directory.Then you need rewrite the launch file to start your lidar. We have put an example launch file "ML30SA1_two_sensor.launch" to load two lidars together for reference.
@@ -74,7 +74,7 @@ In the launch file, we could set the parameter (timestamp_type) to fill PointClo
 
 | Param               | Definition                                                   | Ranges                                                       | Notes                                                        |
 | ------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| model               | model of LiDAR                                               | ML30B1 / ML30SA1 / MLX / MLXS                                | "unknown LIDAR model" will be printed in the console if this parameter is set incorrectly. |
+| model               | model of LiDAR                                               | ML30B1 / ML30SA1 / MLX / MLXS / ML30S+A1 / ML30S+B1                               | "unknown LIDAR model" will be printed in the console if this parameter is set incorrectly. |
 | device_ip           | IP of LiDAR                                                  | ---                                                          | if this value does not match the device, there will be no pointcloud message and will get "zvision lidar poll timeout" message in the console. |
 | udp_port            | UDP dst port of LiDAR                                        | ---                                                          | if this value does not match the device, there will be no pointcloud message and will get "zvision lidar poll timeout" message in the console. |
 | angle_path          | path of calibration file                                     | ---                                                          | If the driver fails to open the file,it will print "Open calibration file error" in the console.<br />if the value is set to "", the driver will get calibration data online (only works in online mode). |

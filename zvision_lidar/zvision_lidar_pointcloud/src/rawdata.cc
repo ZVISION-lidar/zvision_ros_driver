@@ -175,7 +175,7 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
               }
 			  double distantce_real_live = disTemp * 0.0015;/*distance from udp*/
 			  intensity = (((Int_High & 0x1F) << 8) + (Int_Low));/*reflectivity from udp*/
-              intensity = intensity & 0x3FF;
+              intensity = intensity & 0xFF;
 
               zvision::PointCalibrationData& cal = this->cal_lut_->data[point_num];
               point.x = distantce_real_live * cal.cos_ele * cal.sin_azi;/*x*/
@@ -255,7 +255,7 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
               }
 			  double distantce_real_live = disTemp * 0.0015;/*distance from udp*/
 			  intensity = (((Int_High & 0x1F) << 8) + (Int_Low));/*reflectivity from udp*/
-			  intensity = intensity & 0x3FF;
+			  intensity = intensity & 0xFF;
 
               zvision::PointCalibrationData& cal = this->cal_lut_->data[point_num];
               point.x = distantce_real_live * cal.cos_ele * cal.sin_azi;/*x*/
@@ -334,7 +334,7 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
               }
               double distantce_real_live = disTemp * 0.0015;/*distance from udp*/
               intensity = (((Int_High & 0x1F) << 8) + (Int_Low));/*reflectivity from udp*/
-              intensity = intensity & 0x3FF;
+              intensity = intensity & 0xFF;
 
               zvision::PointCalibrationData& cal = this->cal_lut_->data[point_num];
               point.x = distantce_real_live * cal.cos_ele * cal.sin_azi;/*x*/
@@ -413,7 +413,7 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
               }
               double distantce_real_live = disTemp * 0.0015;/*distance from udp*/
               intensity = (((Int_High & 0x1F) << 8) + (Int_Low));/*reflectivity from udp*/
-              intensity = intensity & 0x3FF;
+              intensity = intensity & 0xFF;
 
               zvision::PointCalibrationData& cal = this->cal_lut_->data[point_num];
               point.x = distantce_real_live * cal.cos_ele * cal.sin_azi;/*x*/
@@ -492,7 +492,7 @@ void RawData::unpack(const zvision_lidar_msgs::zvisionLidarPacket& pkt, pcl::Poi
               }
               double distantce_real_live = disTemp * 0.0015;/*distance from udp*/
               intensity = (((Int_High & 0x1F) << 8) + (Int_Low));/*reflectivity from udp*/
-              intensity = intensity & 0x3FF;
+              intensity = intensity & 0xFF;
 
               zvision::PointCalibrationData& cal = this->cal_lut_->data[point_num];
               point.x = distantce_real_live * cal.cos_ele * cal.sin_azi;/*x*/

@@ -1,0 +1,59 @@
+
+lidar:
+  ###############################################################################
+  - base:
+      lidar_type: 30spb1IS1                # Lidar type: ML30S, ML30SFactory, ML30SPlus, ML30SPlusB1_40, ML30SPlusB1_90 MLXS and Exciton
+      lidar_ip: 192.168.10.108      # Lidar ip address
+      lidar_port: 2368                 # Lidar destination port
+      online: true                    # true:  play online lidar
+                                                 # false: play pcap file
+      ## optional
+      multicast_en: false              # Enable to join multicast
+      multicast_ip: 224.0.0.1          # multicast ip address
+      # pcap_path:  /home/z/Downloads/6.0.22算法关.pcap   # Play offline pointcloud data from pcap_path
+      pcap_path: /home/z/Downloads/第一圈-改灰度参数-算法关.pcap
+      angle_path:        # We support calibration file for lidar device as:
+                                                            #1 ML30S.cal                ML30S lidar device
+                                                            #2 ML30SPlus.cal        ML30SPlus lidar device
+                                                            #3 ML30SFactory.cal  ML30SFactory lidar device
+                                                            #4 MLXS.cal                  MLXS lidar device
+      pcap_rate: 10                    # Frame rate for play of offline pcap point cloud data. Unit:hz
+      ## Pointcloud debug (not support)
+      x_tra: 0
+      y_tra: 0
+      z_tra: 0
+      x_rot: 0
+      y_rot: 0
+      z_rot: 0
+      ## ros
+    ros:
+      frame_id: zvlidar
+      topic_tag_name: zvlidar_IS1     # if topic_tag_name is zvlidar_ml30s
+                                        # if pub_pointcloud_xyzi is true, the topic name is zvlidar_ml30s_points_xyzi
+                                        #  . pub_pointcloud_xyzirt . . . . , . . . . . . . . . . . . . . . . zvlidar_ml30s_points_xyzirt
+                                        #  . pub_pointcloud_xyzrgba . . , . . . . . . . . . . . . . . . . zvlidar_ml30s_points_xyzrgba
+      use_lidar_time: true               # true: use lidar timestamp from first udp packet data.  false: use system timestamp from first udp packet that captured.
+      use_lidar_line_id: false          # for PointCloudXYZIRT, if true R:point line id, else R:fov id
+      ## Pointcloud Topic Switch
+      pub_lidar_packet: true           # lidar frame raw data
+      pub_pointcloud_xyzi: true         # PointCloudXYZI
+      pub_pointcloud_xyzirt: false      # PointCloudXYZIRT
+      pub_pointcloud_xyzrgba: false     # PointCloudXYZRGBA
+      pub_pointcloud_blooming: false     # blooming debug
+      ## Diagnostic Topic Switch
+      pub_diagnostic: false             # Lidar Heartbeat message
+      ## proc
+    proc:
+      ## filter
+      filter_mode: None                 #####   METHOD         DESCRIPTION     ####
+                                        #           None -   raw pointcloud
+                                        #          Voxel -   voxel filtering
+                                        #           Line -   line downsampling
+                                        # OutlierRemoval -   outlier filtering
+                                        #     ConfigFile -   customize downsampling
+      ##  filter parameters
+      voxel_leaf_size: 0.5              # voxel  threshold, default 0.5
+      line_sample: 2                    # line  threshold, default 2
+      outlier_removal: 0.25             # outlier threshold, default 0.25
+      downsample_cfg_path: /home/zvision/downsampleConfigFile.txt   # downsampling config file path
+

@@ -1,0 +1,24 @@
+# - Config file for the @PROJECT_NAME_LOWER@ package
+# It defines the following variables
+#  zvision_sdk_INCLUDE_DIRS - include directories for @PROJECT_NAME_LOWER@
+#  zvision_sdk_LIBRARIES    - libraries to link against
+#  zvision_sdk_FOUND        - found flag
+
+
+if(${ENABLE_TRANSFORM})
+  add_definitions("-DENABLE_TRANSFORM")
+endif(${ENABLE_TRANSFORM})
+
+# Install
+# the sdk include directory is ${ZVISION_SDK_INSTALL_DIR}/include
+#                     library directory is ${ZVISION_SDK_INSTALL_DIR}/lib
+#                     binary directory is ${ZVISION_SDK_INSTALL_DIR}/bin
+get_filename_component(ZVISION_SDK_INSTALL_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+set(ZVISION_SDK_INCLUDE_DIR ${ZVISION_SDK_INSTALL_DIR}/../include)
+set(ZVISION_SDK_LIBRARY_DIR ${ZVISION_SDK_INSTALL_DIR}/../lib)
+
+# Libraries
+set(ZVISION_SDK_EXTERNAL_LIBS "@EXTERNAL_LIBS@")
+set(ZVISION_SDK_LIBRARY "@SDK_LIBRARY_NAME@")
+
+set(ZVISION_SDK_FOUND true)

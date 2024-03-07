@@ -1,0 +1,13 @@
+ml30spb1:
+    retro_min_samples: 8  # retro聚类最少点数
+    epsilon: 0.15  # 聚类距离阈值
+    blooming_dist: 0.75  # unit m blooming与retro测距差异
+    retro_ins: 200
+    blooming_ins1: 50  # 本分区blooming阈值
+    blooming_ins2: 50  # 相邻分区blooming阈值
+
+common:
+    # data_root: "/home/z/qiaodan/data/blooming2/pcap 1.5m"
+    data_root: "/home/z/qiaodan/data/blooming2"
+    loop_num: 1
+    debug_flag: True

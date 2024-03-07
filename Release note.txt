@@ -1,7 +1,0 @@
-V2.2
-- add coordinate transformation script in the launch file
-- Fix time difference when connecting to GPS
-V2.5
--ML30S-A1 support
-V2.6
--Compile error when the dir name contains special characters, '+', '(', ')' etc.

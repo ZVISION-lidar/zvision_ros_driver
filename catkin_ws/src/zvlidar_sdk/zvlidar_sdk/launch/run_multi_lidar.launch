@@ -1,0 +1,14 @@
+<launch>
+  <group ns="ns1">
+    <node pkg="zvlidar_sdk" type="zvlidar_node" name="zvlidar_node_driver_1" output="screen">
+      <param name="yaml_path" value="$(find zvlidar_sdk)/config/config1.yaml"/>
+    </node>
+  </group>
+  <group ns="ns2">
+    <node pkg="zvlidar_sdk" type="zvlidar_node" name="zvlidar_node_driver_2" output="screen">
+      <param name="yaml_path" value="$(find zvlidar_sdk)/config/config2.yaml"/>
+    </node>
+  </group>
+  <!-- rviz -->
+  <node pkg="rviz" name="rviz" type="rviz" args="-d $(find zvlidar_sdk)/config/rviz/rviz.rviz" />
+</launch>

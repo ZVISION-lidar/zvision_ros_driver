@@ -1,0 +1,9 @@
+<library path="lib/libzvlidar_nodelet">
+  <class name="zvlidar_sdk/ZVLidarNodelet"
+         type="zvlidar_sdk::ZVLidarNodelet"
+         base_class_type="nodelet::Nodelet">
+    <description> 
+      Publish raw zvision lidar data packets.
+    </description>
+  </class>
+</library>

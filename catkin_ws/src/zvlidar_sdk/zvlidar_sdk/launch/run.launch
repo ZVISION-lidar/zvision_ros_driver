@@ -1,0 +1,7 @@
+<launch>
+  <node pkg="zvlidar_sdk" type="zvlidar_node" name="zvlidar_node_driver" output="screen">
+    <param name="yaml_path" value="$(find zvlidar_sdk)/config/config.yaml"/>
+  </node>
+  <!-- rviz -->
+  <node pkg="rviz" name="rviz" type="rviz" args="-d $(find zvlidar_sdk)/config/rviz/rviz.rviz" />
+</launch>

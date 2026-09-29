@@ -1,0 +1,3 @@
+[submodule "zvlidar_sdk/src/lidar_sdk"]
+	path = zvlidar_sdk/src/lidar_sdk
+	url = https://github.com/ZVISION-lidar/zvision_sdk.git

@@ -1,0 +1,79 @@
+
+lidar:
+  ###############################################################################
+  #################### 多雷达示例（同型号两台 UDP，可混接串口）###################
+  ###############################################################################
+  - base:
+      # 数据源: udp(默认,EZ6/NZ1) | serial(MRZ16 EE-FF 双串口, 见下方注释示例)
+      transport: udp
+      lidar_type: nz1_a2            # Lidar type: ez6_b2/nz1_a2
+      lidar_ip: 192.168.10.108      # Lidar ip address
+      lidar_port: 2368                 # Lidar destination port
+      online: true                    # true:  play online lidar
+                                                 # false: play pcap file
+      ## optional
+      multicast_en: false              # Enable to join multicast
+      multicast_ip: 224.0.0.1          # multicast ip address
+      # pcap_path:  /home/z/Downloads/6.0.22算法关.pcap   # Play offline pointcloud data from pcap_path
+      angle_path:                   # udp: 标定csv; serial: 通道角文件(txt/yaml); 留空: udp走TCP/serial走$LDCMD
+      #angle_path:  /home/book/ros_test/src/zvlidar_sdk/src/lidar_sdk/doc/nz1_a2_angle_comp.csv 
+      pcap_rate: 10                    # Frame rate for play of offline pcap point cloud data. Unit:hz
+      ## serial 字段 (transport: serial 时启用, 默认值可省)
+      # port_send: /dev/ttyACM2
+      # port_recv: /dev/ttyACM0
+      # baud_send: 9600
+      # baud_recv: 3125000
+      ## Pointcloud debug
+      x_tra: 0
+      y_tra: 0
+      z_tra: 0
+      x_rot: 0
+      y_rot: 0
+      z_rot: 0
+      ## ros
+    ros:
+      frame_id: zvlidar
+      topic_tag_name: zvlidar       # if topic_tag_name is zvlidar_ml30s
+                                        # if pub_pointcloud_xyzi is true, the topic name is zvlidar_ml30s_points_xyzi
+                                        #  . pub_pointcloud_xyzirt . . . . , . . . . . . . . . . . . . . . . zvlidar_ml30s_points_xyzirt
+                                        #  . pub_pointcloud_xyzrgba . . , . . . . . . . . . . . . . . . . zvlidar_ml30s_points_xyzrgba
+      use_lidar_time: true              # true: use lidar timestamp from first udp packet data.  false: use system timestamp from first udp packet that captured.
+      use_lidar_line_id: false          # for PointCloudXYZIRT, if true R:point line id, else R:fov id
+      ## Pointcloud Topic Switch
+      pub_lidar_packet: false           # lidar frame raw data
+      pub_pointcloud_xyzi: false        # PointCloudXYZI
+      pub_pointcloud_xyzirt: true       # PointCloudXYZIRT
+      pub_pointcloud_xyzrgba: false     # PointCloudXYZRGBA
+      pub_imu_msg: false                #imu messages
+      
+  - base:
+      # 第 2 台: Serial (MRZ16 EE-FF 双串口)
+      transport: serial
+      lidar_type: mrz16             # Lidar type: mrz16
+      online: true                  # serial 必须 true (不支持 pcap)
+      port_send: /dev/ttyACM2       # 命令口 ($LDCMD), Windows 填 COM3
+      port_recv: /dev/ttyACM0       # EE-FF 点云口, Windows 填 COM4
+      baud_send: 9600
+      baud_recv: 3125000
+      angle_path:                   # serial: 通道角文件(txt/yaml), 留空则 $LDCMD/$LDACK 读通道角
+      ## Pointcloud debug
+      x_tra: 0
+      y_tra: 0
+      z_tra: 0
+      x_rot: 0
+      y_rot: 0
+      z_rot: 0
+      ## ros
+    ros:
+      frame_id: mrz
+      topic_tag_name: mrz
+      use_lidar_time: true
+      use_lidar_line_id: true       # 串行雷达建议 true
+      ## Pointcloud Topic Switch
+      pub_lidar_packet: false
+      pub_pointcloud_xyzi: false
+      pub_pointcloud_xyzirt: true
+      pub_pointcloud_xyzrgba: false
+      pub_imu_msg: true             # 串口雷达建议开启 imu
+
+

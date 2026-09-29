@@ -1,0 +1,32 @@
+lidar:
+  - base:
+      # 数据源: serial (MRZ16 EE-FF 双串口)
+      transport: serial
+      lidar_type: mrz16            # Lidar type: mrz16
+      online: true                 # serial 必须 true（不支持 pcap 离线）
+      ## Serial 配置 (transport: serial 时启用)
+      port_send: /dev/ttyACM2       # 命令口 ($LDCMD), Windows 填 COM3
+      port_recv: /dev/ttyACM0       # EE-FF 点云口, Windows 填 COM4
+      baud_send: 9600
+      baud_recv: 3125000
+      # 角度文件入口: serial = MRZ16 通道角文件(txt/yaml); 留空则 $LDCMD/$LDACK 读通道角
+      angle_path:
+      ## Pointcloud debug
+      x_tra: 0
+      y_tra: 0
+      z_tra: 0
+      x_rot: 0
+      y_rot: 0
+      z_rot: 0
+      ## ros
+    ros:
+      frame_id: zvlidar
+      topic_tag_name: zvlidar       # 话题前缀, 用于区分不同雷达
+      use_lidar_time: true          # true: 使用雷达时间戳
+      use_lidar_line_id: true       # 串行雷达建议 true (PointCloudXYZIRT 的 R 为线号)
+      ## Pointcloud Topic Switch
+      pub_lidar_packet: false       # lidar 原始帧数据
+      pub_pointcloud_xyzi: false     # PointCloudXYZI
+      pub_pointcloud_xyzirt: true    # PointCloudXYZIRT
+      pub_pointcloud_xyzrgba: false  # PointCloudXYZRGBA
+      pub_imu_msg: true              # 串口雷达建议开启 imu

@@ -1,9 +1,0 @@
-<library path="lib/libzvision_lidar_cloud_nodelet">
-  <class name="zvision_lidar_pointcloud/CloudNodelet"
-         type="zvision_lidar_pointcloud::CloudNodelet"
-         base_class_type="nodelet::Nodelet">
-    <description>
-      Aggregates points from multiple packets, publishing PointCloud2.
-    </description>
-  </class>
-</library>

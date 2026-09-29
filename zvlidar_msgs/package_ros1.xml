@@ -1,0 +1,21 @@
+<package>
+  <name>zvlidar_msgs</name>
+  <version>1.0.0</version>
+  <description>
+    ROS message definitions for zvision_lidar 3D LIDARs.
+  </description>
+  <maintainer email="pengfei.cui@zvision.xyz">Pengfei Cui</maintainer>
+  <author>Pengfei Cui</author>
+  <author>Tony Zhang</author>
+  <license>BSD</license>
+
+<!-- ros -->
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>message_generation</build_depend>
+  <build_depend>std_msgs</build_depend>
+
+  <run_depend>message_runtime</run_depend>
+  <run_depend>std_msgs</run_depend>
+  
+</package>

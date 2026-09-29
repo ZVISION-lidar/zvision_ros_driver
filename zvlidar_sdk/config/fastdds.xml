@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<profiles xmlns="http://www.eprosima.com/XMLSchemas/fastRTPS_Profiles">
+    <transport_descriptors>
+        <transport_descriptor>
+            <transport_id>shm_transport</transport_id>
+            <type>SHM</type>
+            <segment_size>16777216</segment_size>
+        </transport_descriptor>
+    </transport_descriptors>
+
+    <participant profile_name="default_participant" is_default_profile="true">
+        <rtps>
+            <userTransports>
+                <transport_id>shm_transport</transport_id>
+            </userTransports>
+            <useBuiltinTransports>true</useBuiltinTransports>
+        </rtps>
+    </participant>
+
+    <publisher profile_name="default publisher profile" is_default_profile="true">
+        <historyMemoryPolicy>DYNAMIC</historyMemoryPolicy>
+        <qos>
+            <publishMode>
+                <kind>ASYNCHRONOUS</kind>
+            </publishMode>
+        </qos>
+    </publisher>
+
+    <subscriber profile_name="default subscriber profile" is_default_profile="true">
+        <historyMemoryPolicy>DYNAMIC</historyMemoryPolicy>
+    </subscriber>
+</profiles>
